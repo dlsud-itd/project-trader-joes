@@ -1,0 +1,96 @@
+<main class="login">
+  <section class="brand" aria-hidden="true">
+    <div class="brand__logo">
+      <span class="brand__mark">TF</span>
+      <span>TalentFlow</span>
+    </div>
+
+    <div class="brand__copy">
+      <h1>Screen applicants faster. Decide as a team.</h1>
+      <p>AI fit scores, a shared pipeline, and notes your whole hiring team can see.</p>
+    </div>
+
+    <div class="pipeline">
+      <span class="pipeline__label">Example pipeline</span>
+      <ol class="pipeline__stages">
+        @for (stage of stages; track stage.name) {
+          <li>
+            <span class="pipeline__count">{{ stage.count }}</span>
+            <span class="pipeline__name">{{ stage.name }}</span>
+          </li>
+        }
+      </ol>
+    </div>
+  </section>
+
+  <section class="panel">
+    <form class="form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <div class="form__head">
+        <h2>Sign in</h2>
+        <p>For recruitment managers and recruiters.</p>
+      </div>
+
+      @if (reason() === 'expired') {
+        <div class="tf-alert tf-alert--info" role="status">
+          Your session expired. Sign in again to continue.
+        </div>
+      }
+
+      @if (error(); as message) {
+        <div class="tf-alert tf-alert--error" role="alert">{{ message }}</div>
+      }
+
+      <div class="tf-field">
+        <label for="email">Email</label>
+        <input
+          id="email"
+          type="email"
+          autocomplete="email"
+          formControlName="email"
+          placeholder="you@company.com"
+          [class.is-invalid]="showError('email')"
+          [attr.aria-invalid]="showError('email')"
+        />
+        @if (showError('email')) {
+          <span class="tf-error">Enter a valid email address.</span>
+        }
+      </div>
+
+      <div class="tf-field">
+        <label for="password">Password</label>
+        <div class="password">
+          <input
+            id="password"
+            [type]="showPassword() ? 'text' : 'password'"
+            autocomplete="current-password"
+            formControlName="password"
+            [class.is-invalid]="showError('password')"
+            [attr.aria-invalid]="showError('password')"
+          />
+          <button
+            type="button"
+            class="password__toggle"
+            (click)="showPassword.set(!showPassword())"
+            [attr.aria-label]="showPassword() ? 'Hide password' : 'Show password'"
+          >
+            {{ showPassword() ? 'Hide' : 'Show' }}
+          </button>
+        </div>
+        @if (showError('password')) {
+          <span class="tf-error">Enter your password.</span>
+        }
+      </div>
+
+      <button class="tf-btn tf-btn--primary form__submit" type="submit" [disabled]="submitting()">
+        @if (submitting()) {
+          <span class="tf-spinner" aria-hidden="true"></span>
+          Signing in…
+        } @else {
+          Sign in
+        }
+      </button>
+
+      <p class="form__note">Accounts are created by a recruitment manager.</p>
+    </form>
+  </section>
+</main>

@@ -1,0 +1,139 @@
+.head {
+  margin-bottom: 24px;
+
+  h1 {
+    font-size: 28px;
+  }
+
+  p {
+    margin: 6px 0 0;
+    color: var(--tf-muted);
+  }
+}
+
+.notice {
+  margin-bottom: 20px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+  gap: 20px;
+  align-items: start;
+}
+
+.card {
+  display: grid;
+  gap: 16px;
+  padding: 22px;
+  border: 1px solid var(--tf-line);
+  border-radius: var(--tf-radius);
+  background: var(--tf-surface);
+
+  h2 {
+    font-size: 17px;
+  }
+
+  .tf-btn {
+    justify-self: start;
+    height: 38px;
+    font-size: 14px;
+  }
+}
+
+.status {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+
+  &__row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--tf-line);
+  }
+
+  dt {
+    color: var(--tf-muted);
+    font-size: 14px;
+  }
+
+  dd {
+    margin: 0;
+    min-width: 0;
+    text-align: right;
+    overflow-wrap: anywhere;
+  }
+
+  &__error {
+    margin: 0;
+    font-size: 14px;
+    color: var(--tf-danger);
+  }
+}
+
+.mono {
+  font-family: var(--tf-font-mono);
+  font-size: 12.5px;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+
+  &::before {
+    content: '';
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  &--ok {
+    background: var(--tf-success-soft);
+    color: var(--tf-success);
+  }
+
+  &--down {
+    background: var(--tf-danger-soft);
+    color: var(--tf-danger);
+  }
+
+  &--neutral {
+    background: var(--tf-bg);
+    color: var(--tf-muted);
+  }
+}
+
+.access {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    position: relative;
+    padding-left: 22px;
+    color: var(--tf-ink-soft);
+
+    &::before {
+      content: '';
+      position: absolute;
+      left: 2px;
+      top: 7px;
+      width: 9px;
+      height: 5px;
+      border-left: 2px solid var(--tf-accent);
+      border-bottom: 2px solid var(--tf-accent);
+      transform: rotate(-45deg);
+    }
+  }
+}
