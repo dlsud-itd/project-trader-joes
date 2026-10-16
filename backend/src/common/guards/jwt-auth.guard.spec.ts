@@ -1,77 +1,67 @@
 import { ExecutionContext, UnauthorizedException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { AuthUser } from '../types/auth-user.js';
 import { JwtAuthGuard } from './jwt-auth.guard.js';
 
-type MockRequest = {
-  headers: { authorization?: string };
-  user?: AuthUser;
-};
-
 describe('JwtAuthGuard', () => {
-  let guard: JwtAuthGuard;
-  let jwtService: JwtService;
-  let reflector: Reflector;
+  const jwt = new JwtService({ secret: 'test-secret' });
+  const reflector = new Reflector();
+  const guard = new JwtAuthGuard(jwt, reflector);
 
-  beforeEach(() => {
-    jwtService = new JwtService({ secret: 'test-secret' });
-    reflector = new Reflector();
-    guard = new JwtAuthGuard(jwtService, reflector);
+  function contextFor(authorization?: string) {
+    const request: { headers: { authorization?: string }; user?: AuthUser } = {
+      headers: { authorization },
+    };
+    const context = {
+      switchToHttp: () => ({ getRequest: () => request }),
+      getHandler: () => () => undefined,
+      getClass: () => class {},
+    } as unknown as ExecutionContext;
+    return { context, request };
+  }
+
+  /** Makes the guard treat the route as @Public() (true) or private (false). */
+  const markPublic = (isPublic: boolean) =>
+    vi.spyOn(reflector, 'getAllAndOverride').mockReturnValue(isPublic);
+
+  afterEach(() => vi.restoreAllMocks());
+
+  it('lets a public route through with no token', async () => {
+    markPublic(true);
+    const { context, request } = contextFor();
+
+    await expect(guard.canActivate(context)).resolves.toBe(true);
+    expect(request.user).toBeUndefined();
   });
 
-  it('should allow access to public routes without a token', async () => {
-    vi.spyOn(reflector, 'getAllAndOverride').mockReturnValue(true);
-    const context = createMockExecutionContext();
+  it('rejects a private route with no token', async () => {
+    markPublic(false);
+    const { context } = contextFor();
 
-    const result = await guard.canActivate(context);
-    expect(result).toBe(true);
+    await expect(guard.canActivate(context)).rejects.toThrow(UnauthorizedException);
   });
 
-  it('rejects missing tokens on protected routes', async () => {
-    vi.spyOn(reflector, 'getAllAndOverride').mockReturnValue(false);
-    const context = createMockExecutionContext(null);
+  it('accepts a valid token and attaches the user', async () => {
+    markPublic(false);
+    const token = await jwt.signAsync({ sub: 5, email: 'a@b.com', role: 'recruiter' });
+    const { context, request } = contextFor(`Bearer ${token}`);
 
-    await expect(guard.canActivate(context)).rejects.toThrow(
-      UnauthorizedException,
-    );
+    await expect(guard.canActivate(context)).resolves.toBe(true);
+    expect(request.user).toEqual({ id: 5, email: 'a@b.com', role: 'recruiter' });
   });
 
-  it('should attach user to request if a valid token is provided', async () => {
-    vi.spyOn(reflector, 'getAllAndOverride').mockReturnValue(false);
-    const userPayload = {
+  it('rejects a fake token', async () => {
+    markPublic(false);
+    const forged = await new JwtService({ secret: 'wrong-secret' }).signAsync({
       sub: 1,
-      email: 'manager@talentflow.dev',
+      email: 'evil@b.com',
       role: 'manager',
-    };
-    const token = await jwtService.signAsync(userPayload);
-
-    const request = {
-      headers: { authorization: `Bearer ${token}` },
-      user: undefined,
-    };
-    const context = createMockExecutionContext(request);
-
-    const result = await guard.canActivate(context);
-    expect(result).toBe(true);
-    expect(request.user).toEqual({
-      id: userPayload.sub,
-      email: userPayload.email,
-      role: userPayload.role,
     });
+    const { context, request } = contextFor(`Bearer ${forged}`);
+
+    await expect(guard.canActivate(context)).rejects.toThrow(UnauthorizedException);
+    expect(request.user).toBeUndefined();
   });
 });
 
-function createMockExecutionContext(
-  requestObj: MockRequest | null = { headers: {}, user: undefined },
-): ExecutionContext {
-  return {
-    switchToHttp: () => ({
-      getRequest: () => requestObj ?? { headers: {}, user: undefined },
-      getResponse: () => ({}),
-    }),
-    getHandler: () => {},
-    getClass: () => {},
-  } as unknown as ExecutionContext;
-}

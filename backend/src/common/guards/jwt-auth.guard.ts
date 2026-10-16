@@ -10,6 +10,8 @@ import type { Request } from 'express';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator.js';
 import type { AuthUser, JwtPayload } from '../types/auth-user.js';
 
+const BEARER_SCHEME = 'Bearer';
+
 /**
  * Global guard: every route needs a valid Bearer token unless marked @Public().
  */
@@ -53,6 +55,6 @@ export class JwtAuthGuard implements CanActivate {
 
   private extractToken(request: Request): string | undefined {
     const [type, token] = request.headers.authorization?.split(' ') ?? [];
-    return type === 'Bearer' ? token : undefined;
+    return type === BEARER_SCHEME ? token : undefined;
   }
 }
