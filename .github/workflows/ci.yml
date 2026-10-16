@@ -1,12 +1,13 @@
-# Runs on every pull request to main: lint, test, and build both apps.
-# Set this as a required status check in the branch protection rule for main.
+# Runs on every pull request and push to dev and main:
+# lint, test, and build both apps. After a push to dev passes,
+# it triggers a backend deploy on Render.
 name: CI
 
 on:
   pull_request:
-    branches: [main]
+    branches: [dev, main]
   push:
-    branches: [main]
+    branches: [dev, main]
 
 jobs:
   backend:
@@ -43,3 +44,12 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
+
+  deploy-backend:
+    name: Deploy backend
+    needs: [backend]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Render deploy
+        run: curl -fsS -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}"
