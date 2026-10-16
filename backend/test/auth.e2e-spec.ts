@@ -1,4 +1,7 @@
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import {
+  INestApplication,
+  ValidationPipe,
+} from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import 'dotenv/config';
 import request from 'supertest';
@@ -6,17 +9,22 @@ import { AppModule } from '../src/app.module.js';
 import { HttpExceptionFilter } from '../src/common/filters/http-exception.filter.js';
 
 /**
- * Runs against the database in backend/.env (seeded with `npm run db:seed`).
+ * Runs against the database in backend/.env.
+ * Seed it with `npm run db:seed`.
  * Run with: npm run test:e2e
  */
 describe('Auth (e2e)', () => {
   let app: INestApplication;
 
   beforeAll(async () => {
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+    const moduleRef = await Test.createTestingModule({
+      imports: [AppModule],
+    }).compile();
     app = moduleRef.createNestApplication();
     app.setGlobalPrefix('api');
-    app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+    app.useGlobalPipes(
+      new ValidationPipe({ whitelist: true, transform: true }),
+    );
     app.useGlobalFilters(new HttpExceptionFilter());
     await app.init();
   });
@@ -26,7 +34,9 @@ describe('Auth (e2e)', () => {
   });
 
   const login = (email: string, password: string) =>
-    request(app.getHttpServer()).post('/api/auth/login').send({ email, password });
+    request(app.getHttpServer())
+      .post('/api/auth/login')
+      .send({ email, password });
 
   it('GET /api/health reports the database is up', () =>
     request(app.getHttpServer())
@@ -35,7 +45,9 @@ describe('Auth (e2e)', () => {
       .expect((res) => expect(res.body.database).toBe('up')));
 
   it('logs in with valid credentials', async () => {
-    const res = await login('manager@talentflow.dev', 'Manager123!').expect(200);
+    const res = await login('manager@talentflow.dev', 'Manager123!').expect(
+      200,
+    );
     expect(res.body.token).toEqual(expect.any(String));
     expect(res.body.user.role).toBe('manager');
   });
@@ -52,7 +64,10 @@ describe('Auth (e2e)', () => {
     const { body } = await login('recruiter@talentflow.dev', 'Recruiter123!');
     const auth = { Authorization: `Bearer ${body.token}` };
 
-    await request(app.getHttpServer()).get('/api/auth/me').set(auth).expect(200);
+    await request(app.getHttpServer())
+      .get('/api/auth/me')
+      .set(auth)
+      .expect(200);
     await request(app.getHttpServer())
       .post('/api/auth/register')
       .set(auth)
@@ -76,7 +91,7 @@ describe('Auth (e2e)', () => {
     expect(res.body.details).toEqual(expect.any(Array));
   });
 
-  it('allows a manager to register a user (201) and rejects duplicate emails with 409', async () => {
+  it('registers a user and rejects duplicate emails', async () => {
     const { body } = await login('manager@talentflow.dev', 'Manager123!');
     const auth = { Authorization: `Bearer ${body.token}` };
     const uniqueEmail = `staff_${Date.now()}@talentflow.dev`;
@@ -94,7 +109,7 @@ describe('Auth (e2e)', () => {
       .set(auth)
       .send(payload)
       .expect(201);
-    
+
     expect(res.body.user).toHaveProperty('email', uniqueEmail);
 
     // 2. Attempting to register with the exact same email gives 409 Conflict
