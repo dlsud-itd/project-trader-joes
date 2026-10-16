@@ -1,0 +1,88 @@
+<header class="head">
+  <h1>Team accounts</h1>
+  <p>Create sign-in accounts for recruitment managers and recruiters.</p>
+</header>
+
+<div class="layout">
+  <form class="card" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <h2>New account</h2>
+
+    @if (error(); as message) {
+      <div class="tf-alert tf-alert--error" role="alert">{{ message }}</div>
+    }
+
+    <div class="row">
+      <div class="tf-field">
+        <label for="first_name">First name</label>
+        <input id="first_name" formControlName="first_name" autocomplete="off"
+          [class.is-invalid]="showError('first_name')" />
+        @if (showError('first_name')) {
+          <span class="tf-error">Enter a first name.</span>
+        }
+      </div>
+      <div class="tf-field">
+        <label for="last_name">Last name</label>
+        <input id="last_name" formControlName="last_name" autocomplete="off"
+          [class.is-invalid]="showError('last_name')" />
+        @if (showError('last_name')) {
+          <span class="tf-error">Enter a last name.</span>
+        }
+      </div>
+    </div>
+
+    <div class="tf-field">
+      <label for="email">Work email</label>
+      <input id="email" type="email" formControlName="email" autocomplete="off"
+        [class.is-invalid]="showError('email')" />
+      @if (showError('email')) {
+        <span class="tf-error">Enter a valid email address.</span>
+      }
+    </div>
+
+    <div class="tf-field">
+      <label for="password">Temporary password</label>
+      <input id="password" type="text" formControlName="password" autocomplete="new-password"
+        [class.is-invalid]="showError('password')" />
+      @if (showError('password')) {
+        <span class="tf-error">Use at least 8 characters with a letter and a number.</span>
+      } @else {
+        <span class="tf-hint">At least 8 characters, with a letter and a number. Share it with the person directly.</span>
+      }
+    </div>
+
+    <div class="tf-field">
+      <label for="role">Role</label>
+      <select id="role" formControlName="role">
+        @for (role of roles; track role[0]) {
+          <option [value]="role[0]">{{ role[1] }}</option>
+        }
+      </select>
+    </div>
+
+    <button class="tf-btn tf-btn--primary" type="submit" [disabled]="saving()">
+      @if (saving()) {
+        <span class="tf-spinner" aria-hidden="true"></span>
+        Creating…
+      } @else {
+        Create account
+      }
+    </button>
+  </form>
+
+  <section class="card">
+    <h2>Created this session</h2>
+    @if (created().length === 0) {
+      <p class="empty">New accounts appear here after you create them.</p>
+    } @else {
+      <ul class="people">
+        @for (person of created(); track person.id) {
+          <li>
+            <span class="people__name">{{ person.first_name }} {{ person.last_name }}</span>
+            <span class="people__email">{{ person.email }}</span>
+            <span class="people__role">{{ roleLabels[person.role] }}</span>
+          </li>
+        }
+      </ul>
+    }
+  </section>
+</div>
