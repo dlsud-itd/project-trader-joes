@@ -8,9 +8,11 @@ Recruiters post jobs, applicants apply through an online form, an AI service sco
 
 | | URL |
 |---|---|
-| Web app | _add the Appwrite Sites URL here_ |
-| API | _add the Render URL here_ (`/api/health` shows status) |
-| API docs | _Render URL_ + `/api/docs` |
+| Web app | https://talentflow.appwrite.network |
+| API | https://talentflow-api-0j7m.onrender.com (status: [`/api/health`](https://talentflow-api-0j7m.onrender.com/api/health)) |
+| API docs | https://talentflow-api-0j7m.onrender.com/api/docs |
+
+> The API runs on Render's free tier and sleeps after 15 minutes without traffic. The first request after that can take up to a minute.
 
 ## Sample accounts
 
@@ -107,24 +109,46 @@ All routes start with `/api`. Send the token from login as `Authorization: Beare
 
 Errors always look like `{ "error": "message", "details": ["..."] }`.
 
-## Deployment
+## Deployment setup (for reference)
 
-1. **Database (Neon):** create a project and copy the connection string.
-2. **API (Render):** New → Blueprint → select this repo. Set `DATABASE_URL` to the Neon string and `CORS_ORIGINS` to the web app URL. Each deploy runs migrations before starting.
-3. **Web app (Appwrite Sites):** Create site → connect this repo with these settings:
+1. **Database (Neon):** Singapore region. The connection string is stored only in Render's environment variables.
+2. **API (Render):** web service from the `dev` branch.
+   - Root directory: `backend/`
+   - Build command: `npm ci && npm run build`
+   - Start command: `npm run start:prod` (runs migrations, then starts the API)
+   - Health check path: `/api/health`
+   - Environment: `NODE_VERSION=24`, `DATABASE_URL`, `JWT_SECRET`, `JWT_EXPIRES_IN=1d`, `CORS_ORIGINS`
+   - Auto-deploy is off; GitHub Actions triggers deploys with the `RENDER_DEPLOY_HOOK` secret.
+3. **Web app (Appwrite Sites):** site connected to the `dev` branch.
    - Root directory: `frontend`
    - Install command: `npm install`
    - Build command: `npm run build`
    - Output directory: `./dist/frontend/browser`
-   - Fallback file: `index.html` (needed so page refreshes on `/dashboard` work)
-4. Put the Render URL in `frontend/src/environments/environment.ts`, and both URLs in the **Live links** table above.
-
-> Render's free tier sleeps after 15 minutes without traffic. The first request after that takes about a minute.
+   - Fallback file: `index.html` (needed so refreshing `/dashboard` works)
 
 ## How we work (GitHub Flow)
 
-- Never push to `main`. Create a branch from `main`, then open a pull request.
-- Branch names: `feat-…`, `fix-…`, `docs-…`, `chore-…` (e.g. `feat-job-postings-crud`).
+```
+feature branch ──PR──▶ dev ──PR at end of sprint──▶ main
+```
+
+- `dev` is where finished work is combined. `main` holds each sprint's release.
+- Never push directly to `dev` or `main`. Both are protected: each PR needs 1 approval and passing CI.
+- Start every branch from an up-to-date `dev`:
+  ```bash
+  git checkout dev
+  git pull
+  git checkout -b feat-job-postings-crud
+  ```
+- Branch names: `feat-…`, `fix-…`, `docs-…`, `chore-…`.
 - Commit messages follow [Conventional Commits](https://www.conventionalcommits.org): `feat(frontend): add careers page`.
-- `main` is protected: each PR needs 1 approval and a passing CI check.
+- Open pull requests into `dev`. At the end of each sprint, the PM opens a `dev → main` release PR.
 - Sprint documents go in `documents/sprint-N/`.
+
+### Deployments
+
+| Part | Host | Deploys when |
+|---|---|---|
+| Web app | Appwrite Sites | A change is merged into `dev` |
+| API | Render | A change is merged into `dev` and the CI **Backend** job passes |
+| Database | Neon | Migrations run automatically on each API deploy |
