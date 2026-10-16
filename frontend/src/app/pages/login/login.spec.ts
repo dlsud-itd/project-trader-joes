@@ -1,16 +1,33 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import {
+  HttpTestingController,
+  provideHttpClientTesting,
+} from '@angular/common/http/testing';
+import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
 import { environment } from '../../../environments/environment';
+import { User } from '../../core/auth/auth.models';
 import { Login } from './login';
+
+const LOGIN_URL = `${environment.apiUrl}/auth/login`;
+const VALID_EMAIL = 'manager@talentflow.dev';
+const VALID_PASSWORD = 'Manager123!';
+const FAKE_TOKEN = 'abc';
+const EMAIL_ERROR = 'Enter a valid email address.';
+
+const manager: User = {
+  id: 1,
+  email: VALID_EMAIL,
+  first_name: 'Maria',
+  last_name: 'Santos',
+  role: 'manager',
+};
 
 describe('Login page', () => {
   let fixture: ComponentFixture<Login>;
   let page: Login;
   let http: HttpTestingController;
-
-  const loginUrl = `${environment.apiUrl}/auth/login`;
 
   beforeEach(() => {
     localStorage.clear();
@@ -28,40 +45,41 @@ describe('Login page', () => {
     fixture.detectChanges();
   });
 
-  function find(selector: string): HTMLElement | null {
-    return fixture.nativeElement.querySelector(selector);
+  function findElement(selector: string): HTMLElement {
+    return fixture.debugElement.query(By.css(selector)).nativeElement;
+  }
+
+  function findSubmitButton(): HTMLButtonElement {
+    return findElement('button[type="submit"]') as HTMLButtonElement;
   }
 
   it('shows an error for an invalid email', () => {
-    page.form.controls.email.setValue('not-an-email');
-    page.form.controls.email.markAsTouched();
+    const email = page.form.controls.email;
+    email.setValue('not-an-email');
+    email.markAsTouched();
     fixture.detectChanges();
 
-    expect(find('.tf-error')?.textContent).toContain('Enter a valid email address.');
+    expect(findElement('.tf-error').textContent).toContain(EMAIL_ERROR);
   });
 
   it('disables the button while signing in', async () => {
-    page.form.setValue({ email: 'manager@talentflow.dev', password: 'Manager123!' });
-    const done = page.submit();
+    page.form.setValue({ email: VALID_EMAIL, password: VALID_PASSWORD });
+    const signingIn = page.submit();
     fixture.detectChanges();
 
-    const button = find('button[type="submit"]') as HTMLButtonElement;
-    expect(button.disabled).toBe(true);
+    expect(findSubmitButton().disabled).toBe(true);
 
-    http.expectOne(loginUrl).flush({
-      token: 'abc',
-      user: { id: 1, email: 'manager@talentflow.dev', first_name: 'A', last_name: 'B', role: 'manager' },
-    });
-    await done;
+    http.expectOne(LOGIN_URL).flush({ token: FAKE_TOKEN, user: manager });
+    await signingIn;
     fixture.detectChanges();
 
-    expect(button.disabled).toBe(false);
+    expect(findSubmitButton().disabled).toBe(false);
   });
 
   it('does not send anything when the form is empty', async () => {
     await page.submit();
 
-    http.expectNone(loginUrl);
+    http.expectNone(LOGIN_URL);
     expect(page.submitting()).toBe(false);
   });
 });

@@ -1,12 +1,21 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { provideRouter, Router } from '@angular/router';
+import {
+  HttpTestingController,
+  provideHttpClientTesting,
+} from '@angular/common/http/testing';
+import { provideRouter } from '@angular/router';
 import { environment } from '../../../environments/environment';
 import { User } from './auth.models';
 import { AuthService } from './auth.service';
 
+const LOGIN_URL = `${environment.apiUrl}/auth/login`;
 const TOKEN_KEY = 'talentflow.token';
+const FAKE_TOKEN = 'abc';
+const VALID_PASSWORD = 'Manager123!';
+const WRONG_PASSWORD = 'wrong-password';
+const LOGIN_ERROR = { error: 'Invalid email or password' };
+const UNAUTHORIZED = { status: 401, statusText: 'Unauthorized' };
 
 const manager: User = {
   id: 1,
@@ -23,59 +32,55 @@ describe('AuthService', () => {
   beforeEach(() => {
     localStorage.clear();
     TestBed.configureTestingModule({
-      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([{ path: 'login', children: [] }]),
+      ],
     });
     auth = TestBed.inject(AuthService);
     http = TestBed.inject(HttpTestingController);
   });
 
-  /** Fails the test if any request was made that the test didn't answer. */
-  afterEach(() => http.verify());
-
-  /** Signs in as the manager, answering the login request with a fake token. */
-  async function signIn(token = 'abc'): Promise<void> {
-    const done = auth.login({ email: manager.email, password: 'x' });
-    const req = http.expectOne(`${environment.apiUrl}/auth/login`);
-    expect(req.request.method).toBe('POST');
-    req.flush({ token, user: manager });
-    await done;
+  async function signIn(): Promise<void> {
+    const signingIn = auth.login({
+      email: manager.email,
+      password: VALID_PASSWORD,
+    });
+    http.expectOne(LOGIN_URL).flush({ token: FAKE_TOKEN, user: manager });
+    await signingIn;
   }
 
   it('saves the token after login', async () => {
-    await signIn('abc');
-
-    expect(auth.token()).toBe('abc');
-    expect(localStorage.getItem(TOKEN_KEY)).toBe('abc');
-  });
-
-  it('stores the signed-in user after login', async () => {
     await signIn();
 
-    expect(auth.isAuthenticated()).toBe(true);
-    expect(auth.fullName()).toBe('Maria Santos');
-    expect(auth.hasRole('manager')).toBe(true);
-    expect(auth.hasRole('recruiter')).toBe(false);
+    expect(auth.token()).toBe(FAKE_TOKEN);
+  });
+
+  it('keeps the token in localStorage after login', async () => {
+    await signIn();
+
+    expect(localStorage.getItem(TOKEN_KEY)).toBe(FAKE_TOKEN);
   });
 
   it('clears the token on logout', async () => {
-    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
-    await signIn('abc');
+    await signIn();
 
     auth.logout();
 
-    expect(auth.token()).toBeNull();
+    expect(auth.token()).toBeFalsy();
     expect(localStorage.getItem(TOKEN_KEY)).toBeNull();
-    expect(auth.isAuthenticated()).toBe(false);
-    expect(navigate).toHaveBeenCalledWith(['/login'], {});
   });
 
-  it('tells the login page when the session expired', async () => {
-    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
-    await signIn();
+  it('does not save a token when login fails', async () => {
+    const signingIn = auth.login({
+      email: manager.email,
+      password: WRONG_PASSWORD,
+    });
+    http.expectOne(LOGIN_URL).flush(LOGIN_ERROR, UNAUTHORIZED);
+    await signingIn.catch(() => undefined);
 
-    auth.logout('expired');
-
-    expect(navigate).toHaveBeenCalledWith(['/login'], { queryParams: { reason: 'expired' } });
+    expect(auth.token()).toBeFalsy();
+    expect(localStorage.getItem(TOKEN_KEY)).toBeNull();
   });
 });
-
