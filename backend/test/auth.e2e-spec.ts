@@ -2,7 +2,6 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import 'dotenv/config';
 import request from 'supertest';
-import type { App } from 'supertest/types';
 import { AppModule } from '../src/app.module.js';
 import { HttpExceptionFilter } from '../src/common/filters/http-exception.filter.js';
 
@@ -11,7 +10,7 @@ import { HttpExceptionFilter } from '../src/common/filters/http-exception.filter
  * Run with: npm run test:e2e
  */
 describe('Auth (e2e)', () => {
-  let app: INestApplication<App>;
+  let app: INestApplication;
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
@@ -75,5 +74,34 @@ describe('Auth (e2e)', () => {
       .send({ email: 'not-an-email', password: 'short', role: 'admin' })
       .expect(400);
     expect(res.body.details).toEqual(expect.any(Array));
+  });
+
+  it('allows a manager to register a user (201) and rejects duplicate emails with 409', async () => {
+    const { body } = await login('manager@talentflow.dev', 'Manager123!');
+    const auth = { Authorization: `Bearer ${body.token}` };
+    const uniqueEmail = `staff_${Date.now()}@talentflow.dev`;
+    const payload = {
+      email: uniqueEmail,
+      password: 'Password123!',
+      first_name: 'Test',
+      last_name: 'User',
+      role: 'recruiter',
+    };
+
+    // 1. Manager registers a user successfully (201)
+    const res = await request(app.getHttpServer())
+      .post('/api/auth/register')
+      .set(auth)
+      .send(payload)
+      .expect(201);
+    
+    expect(res.body.user).toHaveProperty('email', uniqueEmail);
+
+    // 2. Attempting to register with the exact same email gives 409 Conflict
+    await request(app.getHttpServer())
+      .post('/api/auth/register')
+      .set(auth)
+      .send(payload)
+      .expect(409);
   });
 });
