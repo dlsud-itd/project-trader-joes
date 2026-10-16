@@ -4,5 +4,5 @@
  */
 export const environment = {
   production: true,
-  apiUrl: 'https://talentflow-api.onrender.com/api',
+  apiUrl: 'https://talentflow-api-0j7m.onrender.com/api',
 };
