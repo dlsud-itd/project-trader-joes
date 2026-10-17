@@ -1,3 +1,4 @@
+
 import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import bcrypt from 'bcryptjs';
 import { eq } from 'drizzle-orm';
@@ -29,6 +30,14 @@ export class UsersService {
     return UsersService.toPublic(user);
   }
 
+  /** Every staff account, sorted by last name, without password hashes. */
+  async findAll(): Promise<PublicUser[]> {
+    const rows = await this.db.query.users.findMany({
+      orderBy: (u, { asc }) => [asc(u.last_name)],
+    });
+    return rows.map((row) => UsersService.toPublic(row));
+  }
+
   async create(input: {
     email: string;
     password: string;
@@ -54,3 +63,4 @@ export class UsersService {
     return UsersService.toPublic(created);
   }
 }
+

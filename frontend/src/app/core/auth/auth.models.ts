@@ -1,3 +1,4 @@
+
 /** Staff roles from the user stories: Recruitment Manager and Recruiter. */
 export type UserRole = 'manager' | 'recruiter';
 
@@ -12,6 +13,7 @@ export interface User {
   first_name: string;
   last_name: string;
   role: UserRole;
+  created_at: string;
 }
 
 export interface LoginRequest {
@@ -36,3 +38,5 @@ export interface RegisterResponse {
   message: string;
   user: User;
 }
+
+

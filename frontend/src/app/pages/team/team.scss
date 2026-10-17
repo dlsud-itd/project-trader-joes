@@ -87,9 +87,61 @@
   }
 }
 
+.accounts {
+  margin-top: 20px;
+
+  .table-wrap {
+    overflow-x: auto;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+
+  th,
+  td {
+    padding: 11px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--tf-line);
+    white-space: nowrap;
+  }
+
+  th {
+    color: var(--tf-muted);
+    font-size: 12.5px;
+    font-weight: 600;
+  }
+
+  tbody tr:last-child td {
+    border-bottom: 0;
+  }
+
+  &__name {
+    font-weight: 600;
+  }
+
+  &__email {
+    color: var(--tf-muted);
+  }
+}
+
+.role-pill {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--tf-accent-soft);
+  color: var(--tf-accent-strong);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
 @media (max-width: 860px) {
   .layout,
   .row {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+
