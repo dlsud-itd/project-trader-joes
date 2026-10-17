@@ -23,6 +23,7 @@ const manager: User = {
   first_name: 'Maria',
   last_name: 'Santos',
   role: 'manager',
+  created_at: '2026-10-16T00:00:00Z'
 };
 
 describe('AuthService', () => {
