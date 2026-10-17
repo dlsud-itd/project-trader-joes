@@ -145,6 +145,66 @@ feature branch ──PR──▶ dev ──PR at end of sprint──▶ main
 - Open pull requests into `dev`. At the end of each sprint, the PM opens a `dev → main` release PR.
 - Sprint documents go in `documents/sprint-N/`.
 
+## 📐 Angular Coding Guidelines & Best Practices
+
+This repository adheres to strict coding standards to maintain readability, security, and predictability across the codebase. Please review and follow these guidelines when writing code or submitting pull requests:
+
+### 1. Project Setup & Static Assets
+- **Git Ignore:** Always configure your `.gitignore` to exclude the `node_modules` directory.
+- **Static Files:** Place static assets (images, videos, etc.) in `public/assets/` or directly inside the `public/` folder.
+
+### 2. TypeScript Standards & Naming Conventions
+- **Naming Cases:**
+  - Use **PascalCase** for type aliases, classes, decorator functions, and enums.
+  - Use **capitalized snake_case** for enum elements (e.g., `USER_ROLE`).
+  - Variable and function names must be descriptive and reflect what they hold or do.
+  - Boolean variables and functions should have yes/no answerable names (e.g., `isValid`, `hasProperty`, `isOnline()`).
+- **Types & Variables:**
+  - Never use the `any` or `Object` types.
+  - Always specify types for every function parameter.
+  - Use the `type` keyword (instead of `interface`) to structure objects.
+  - Use `enum` to group related constants.
+  - Leverage TypeScript's type inference: primitive variables initialized with a value do not require explicit types, but empty arrays or custom objects initialized with values must specify their types (e.g., `students: Student[] = []`).
+
+### 3. Modern Angular Over Vanilla JS
+- Avoid using Vanilla JS approaches (such as `querySelector`, `addEventListener`, or manual `async/await`) where native Angular and RxJS idioms apply.
+
+### 4. Components, Templates, Forms, & Styling
+- **Control Flow:** Use Angular's built-in control flow syntax (`@if`, `@for`) instead of legacy structural directives (`*ngIf`, `*ngFor`).
+- **Imports:** Enclose all components in open and close brackets in your import statements.
+- **Forms:** Always use **Reactive Forms** and form builders. Use the object form when creating form validators and explicitly specify return types for custom validator functions (`null` or `{ [errorKey]: string }`).
+- **Styling:**
+  - Never use `ngStyle`; keep all styles in CSS/SCSS files and use the `ngClass` directive instead.
+  - When using the `::ng-deep` pseudo-class, always encapsulate it within a parent container like `:host`:
+    ```scss
+    :host {
+      ::ng-deep p {
+        background-color: red;
+      }
+    }
+    ```
+  - Keep CSS/SCSS nesting to a maximum of 3 levels.
+
+### 5. Services & HTTP Architecture
+- **Services for APIs:** Always create a dedicated service to implement HTTP requests. **Never** use `HttpClient` directly inside components.
+- **Response Models:** Always create a model or interface/type to structure HTTP responses (avoid using `Object` or `any`).
+
+### 6. RxJS & Observable Best Practices
+- **No Nested Subscriptions:** Do not create an inner observable inside a subscription.
+- **Use Operators:** Use `.pipe()` and appropriate RxJS operators to chain operations cleanly instead of nesting subscriptions manually.
+
+### 7. Code Quality, Formatting, & Comments
+- **Line Length:** Keep each line at a maximum of 80 columns.
+- **Constants:** Avoid magic values by defining constant values or using centralized constants files.
+- **Spacing:** Maintain proper spacing. Leave a maximum of 1 extra newline for readability.
+- **Clean Code:** Regularly remove dead code, unused HTML elements, and unused files.
+- **TODO Comments:** Use the strict TODO format for pending tasks:
+  - HTML: `<!-- TODO(Lastname, Givenname): What needs to be done -->`
+  - TS/JS: `// TODO(Lastname, Givenname): What needs to be done`
+
+### 8. Version Control & Pull Requests
+- Follow standard Git branching strategies and never push directly to `main`.
+- Ensure all pull requests undergo code review and receive at least **1 approval** before merging.
 ### Deployments
 
 | Part | Host | Deploys when |

@@ -10,6 +10,8 @@ import type { Request } from 'express';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator.js';
 import type { AuthUser, JwtPayload } from '../types/auth-user.js';
 
+const BEARER_SCHEME = 'Bearer';
+
 /**
  * Global guard: every route needs a valid Bearer token unless marked @Public().
  */
@@ -37,16 +39,22 @@ export class JwtAuthGuard implements CanActivate {
 
     try {
       const payload = await this.jwt.verifyAsync<JwtPayload>(token);
-      request.user = { id: payload.sub, email: payload.email, role: payload.role };
+      request.user = {
+        id: payload.sub,
+        email: payload.email,
+        role: payload.role,
+      };
       return true;
     } catch {
       if (isPublic) return true;
-      throw new UnauthorizedException('Your session has expired. Sign in again.');
+      throw new UnauthorizedException(
+        'Your session has expired. Sign in again.',
+      );
     }
   }
 
   private extractToken(request: Request): string | undefined {
     const [type, token] = request.headers.authorization?.split(' ') ?? [];
-    return type === 'Bearer' ? token : undefined;
+    return type === BEARER_SCHEME ? token : undefined;
   }
 }
