@@ -1,0 +1,23 @@
+# Render Blueprint for the backend API.
+# In Render: New > Blueprint > pick this repo. Then fill in the variables marked sync: false.
+services:
+  - type: web
+    name: talentflow-api
+    runtime: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm ci && npm run build
+    # Applies database migrations (and seeds sample accounts on an empty database), then starts the API.
+    startCommand: npm run start:prod
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "24"
+      - key: DATABASE_URL
+        sync: false # Neon connection string
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 1d
+      - key: CORS_ORIGINS
+        sync: false # e.g. https://talentflow.appwrite.network,http://localhost:4200

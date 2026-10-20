@@ -1,0 +1,68 @@
+<header class="head">
+  <div>
+    <h1>{{ greeting() }}</h1>
+    <p>You’re signed in as a <strong>{{ roleLabel() }}</strong>.</p>
+  </div>
+</header>
+
+@if (denied()) {
+  <div class="tf-alert tf-alert--info notice" role="status">
+    That page is only available to recruitment managers.
+  </div>
+}
+
+<div class="grid">
+  <section class="card">
+    <h2>System status</h2>
+    <dl class="status">
+      <div class="status__row">
+        <dt>API and database</dt>
+        <dd>
+          @switch (api().kind) {
+            @case ('checking') {
+              <span class="pill pill--neutral">Checking…</span>
+            }
+            @case ('up') {
+              <span class="pill pill--ok">Online</span>
+            }
+            @case ('down') {
+              <span class="pill pill--down">Offline</span>
+            }
+          }
+        </dd>
+      </div>
+      <div class="status__row">
+        <dt>Endpoint</dt>
+        <dd class="mono">{{ apiUrl }}</dd>
+      </div>
+      @if (api(); as state) {
+        @if (state.kind === 'up') {
+          <div class="status__row">
+            <dt>Last checked</dt>
+            <dd>{{ state.checkedAt | date: 'mediumTime' }}</dd>
+          </div>
+        }
+        @if (state.kind === 'down') {
+          <p class="status__error">{{ state.message }}</p>
+        }
+      }
+    </dl>
+    <button
+      class="tf-btn tf-btn--ghost"
+      type="button"
+      (click)="checkApi()"
+      [disabled]="api().kind === 'checking'"
+    >
+      Check again
+    </button>
+  </section>
+
+  <section class="card">
+    <h2>Your access</h2>
+    <ul class="access">
+      @for (item of access(); track item) {
+        <li>{{ item }}</li>
+      }
+    </ul>
+  </section>
+</div>

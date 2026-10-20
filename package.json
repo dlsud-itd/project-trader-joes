@@ -1,0 +1,20 @@
+{
+  "name": "talentflow",
+  "private": true,
+  "description": "TalentFlow: AI-powered applicant screening and pipeline system (Trader Joe's, COMP019)",
+  "scripts": {
+    "setup": "npm install && npm install --prefix backend && npm install --prefix frontend",
+    "dev": "concurrently -n api,web -c cyan,magenta \"npm run start:dev --prefix backend\" \"npm start --prefix frontend\"",
+    "dev:backend": "npm run start:dev --prefix backend",
+    "dev:frontend": "npm start --prefix frontend",
+    "build": "npm run build --prefix backend && npm run build --prefix frontend",
+    "test": "npm test --prefix backend && npm test --prefix frontend",
+    "lint": "npm run lint --prefix backend"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  },
+  "engines": {
+    "node": "^22.22.3 || >=24.15.0"
+  }
+}

@@ -1,0 +1,29 @@
+<header class="bar">
+  <div class="bar__inner">
+    <a class="logo" routerLink="/dashboard">
+<img class="logo__mark" src="logo.svg" alt="" width="34" height="34" />      <span class="logo__name">TalentFlow</span>
+    </a>
+
+    <nav class="nav" aria-label="Main">
+      <a routerLink="/dashboard" routerLinkActive="is-active">Dashboard</a>
+      @if (auth.hasRole('manager')) {
+        <a routerLink="/team" routerLinkActive="is-active">Team accounts</a>
+      }
+    </nav>
+
+    <div class="account">
+      <span class="account__avatar" aria-hidden="true">{{ initials() }}</span>
+      <span class="account__text">
+        <span class="account__name">{{ auth.fullName() }}</span>
+        <span class="account__role">{{ roleLabel() }}</span>
+      </span>
+      <button class="tf-btn tf-btn--ghost account__logout" type="button" (click)="auth.logout()">
+        Sign out
+      </button>
+    </div>
+  </div>
+</header>
+
+<main class="content">
+  <router-outlet />
+</main>
