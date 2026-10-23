@@ -44,7 +44,13 @@
 
 .skeleton {
   height: 420px;
-  background: linear-gradient(90deg, var(--tf-surface), var(--tf-bg), var(--tf-surface)) 0 0 / 200% 100%;
+  background: linear-gradient(
+      90deg,
+      var(--tf-surface),
+      var(--tf-bg),
+      var(--tf-surface)
+    )
+    0 0 / 200% 100%;
   animation: shimmer 1.4s linear infinite;
 }
 
@@ -94,7 +100,9 @@
   border: 1px solid var(--tf-line);
   border-radius: var(--tf-radius-sm);
   cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
 
   input {
     margin: 3px 0 0;

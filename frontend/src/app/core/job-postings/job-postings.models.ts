@@ -1,28 +1,37 @@
-/** `open` accepts applications and shows on the careers page; `closed` stops intake. */
-export type JobPostingStatus = 'open' | 'closed';
+/**
+ * `OPEN` accepts applications and shows on the careers page;
+ * `CLOSED` stops intake. Values match what the API sends.
+ */
+export enum JobPostingStatus {
+  OPEN = 'open',
+  CLOSED = 'closed',
+}
 
 export const STATUS_LABELS: Record<JobPostingStatus, string> = {
-  open: 'Open',
-  closed: 'Closed',
+  [JobPostingStatus.OPEN]: 'Open',
+  [JobPostingStatus.CLOSED]: 'Closed',
 };
 
 /** Limits enforced by the API (backend CreateJobPostingDto). */
-export const POSTING_LIMITS = {
-  title: { min: 3, max: 150 },
-  department: 100,
-  location: 150,
-  description: { min: 20, max: 5000 },
-  requirements: { count: 25, length: 200 },
-} as const;
+export enum PostingLimit {
+  TITLE_MIN = 3,
+  TITLE_MAX = 150,
+  DEPARTMENT_MAX = 100,
+  LOCATION_MAX = 150,
+  DESCRIPTION_MIN = 20,
+  DESCRIPTION_MAX = 5000,
+  REQUIREMENTS_MAX = 25,
+  REQUIREMENT_LENGTH_MAX = 200,
+}
 
-export interface PostingAuthor {
+export type PostingAuthor = {
   id: number;
   first_name: string;
   last_name: string;
-}
+};
 
 /** A posting as staff see it (GET /api/job-postings while signed in). */
-export interface JobPosting {
+export type JobPosting = {
   id: number;
   title: string;
   department: string;
@@ -35,21 +44,21 @@ export interface JobPosting {
   created_at: string;
   updated_at: string;
   author?: PostingAuthor | null;
-}
+};
 
-export interface JobPostingInput {
+export type JobPostingInput = {
   title: string;
   department: string;
   location: string;
   description: string;
   requirements: string;
   status?: JobPostingStatus;
-}
+};
 
-export interface JobPostingResponse {
+export type JobPostingResponse = {
   message: string;
   job_posting: JobPosting;
-}
+};
 
 export function splitRequirements(text: string | null | undefined): string[] {
   return (text ?? '')

@@ -6,7 +6,11 @@ import { RequirementsInput } from './requirements-input';
 
 @Component({
   imports: [ReactiveFormsModule, RequirementsInput],
-  template: `<app-requirements-input [formControl]="control" [maxItems]="3" [maxLength]="20" />`,
+  template: `<app-requirements-input
+    [formControl]="control"
+    [maxItems]="3"
+    [maxLength]="20"
+  />`,
 })
 class Host {
   control = new FormControl('JavaScript\nSQL', { nonNullable: true });
@@ -16,13 +20,17 @@ describe('RequirementsInput', () => {
   let fixture: ComponentFixture<Host>;
   let host: Host;
 
-  const box = () => fixture.debugElement.query(By.css('input')).nativeElement as HTMLInputElement;
+  const box = () =>
+    fixture.debugElement.query(By.css('input'))
+      .nativeElement as HTMLInputElement;
   const items = () =>
     fixture.debugElement
       .queryAll(By.css('.req__text'))
       .map((el) => el.nativeElement.textContent.trim());
   const notice = () =>
-    fixture.debugElement.query(By.css('.req__notice'))?.nativeElement.textContent.trim();
+    fixture.debugElement
+      .query(By.css('.req__notice'))
+      ?.nativeElement.textContent.trim();
 
   const type = (text: string) => {
     box().value = text;
@@ -62,7 +70,9 @@ describe('RequirementsInput', () => {
   });
 
   it('removes an item', () => {
-    fixture.debugElement.queryAll(By.css('.req__remove'))[0].nativeElement.click();
+    fixture.debugElement
+      .queryAll(By.css('.req__remove'))[0]
+      .nativeElement.click();
     fixture.detectChanges();
     expect(host.control.value).toBe('SQL');
   });
@@ -79,7 +89,9 @@ describe('RequirementsInput', () => {
     fixture.detectChanges();
     const paste = new Event('paste') as ClipboardEvent;
     Object.defineProperty(paste, 'clipboardData', {
-      value: { getData: () => '- Angular\n• NestJS\n1. PostgreSQL\n2. Docker' },
+      value: {
+        getData: () => '- Angular\n• NestJS\n1. PostgreSQL\n2. Docker',
+      },
     });
     box().dispatchEvent(paste);
     fixture.detectChanges();

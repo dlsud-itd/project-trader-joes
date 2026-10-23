@@ -1,4 +1,8 @@
-<div class="req" [class.is-invalid]="invalid()" [class.is-disabled]="disabled()">
+<div
+  class="req"
+  [class.is-invalid]="isInvalid()"
+  [class.is-disabled]="isDisabled()"
+>
   @if (items().length) {
     <ol class="req__list" aria-label="Requirements">
       @for (item of items(); track item; let i = $index) {
@@ -8,7 +12,7 @@
           <button
             class="req__remove"
             type="button"
-            [disabled]="disabled()"
+            [disabled]="isDisabled()"
             [attr.aria-label]="'Remove ' + item"
             (click)="remove(i)"
           >
@@ -33,15 +37,15 @@
       type="text"
       autocomplete="off"
       [attr.aria-describedby]="describedBy()"
-      [attr.aria-invalid]="invalid()"
+      [attr.aria-invalid]="isInvalid()"
       [placeholder]="
-        full()
+        isFull()
           ? 'Requirement limit reached'
           : items().length
             ? 'Add another requirement'
             : 'e.g. 2+ years with Angular or React'
       "
-      [disabled]="disabled() || full()"
+      [disabled]="isDisabled() || isFull()"
       [value]="draft()"
       (input)="draft.set(box.value); notice.set(null)"
       (keydown)="onKeydown($event)"
@@ -51,7 +55,7 @@
     <button
       class="tf-btn tf-btn--ghost tf-btn--sm"
       type="button"
-      [disabled]="disabled() || full() || !draft().trim()"
+      [disabled]="isDisabled() || isFull() || !draft().trim()"
       (click)="add(draft()); box.focus()"
     >
       Add
@@ -65,5 +69,7 @@
   } @else {
     <span>Press Enter to add. Paste a list to add several at once.</span>
   }
-  <span class="req__count" [class.is-full]="full()">{{ items().length }}/{{ maxItems() }}</span>
+  <span class="req__count" [class.is-full]="isFull()"
+    >{{ items().length }}/{{ maxItems() }}</span
+  >
 </div>

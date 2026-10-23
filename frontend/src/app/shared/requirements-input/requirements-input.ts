@@ -8,7 +8,10 @@ import {
   viewChild,
 } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
-import { splitRequirements } from '../../core/job-postings/job-postings.models';
+import { PostingLimit, splitRequirements } from '../../core/job-postings';
+
+/** List markers pasted from documents: "- ", "* ", "• ", "1. ", "2) ". */
+const LIST_MARKER = /^\s*(?:[-*•]|\d+[.)])\s+/;
 
 /**
  * Edits a list of requirements, one per item. The form value is a
@@ -31,18 +34,21 @@ import { splitRequirements } from '../../core/job-postings/job-postings.models';
 })
 export class RequirementsInput implements ControlValueAccessor {
   readonly inputId = input('requirements');
-  readonly maxItems = input(25);
-  readonly maxLength = input(200);
-  readonly invalid = input(false);
+  readonly maxItems = input<number>(PostingLimit.REQUIREMENTS_MAX);
+  readonly maxLength = input<number>(PostingLimit.REQUIREMENT_LENGTH_MAX);
+  readonly isInvalid = input(false);
   readonly describedBy = input<string | null>(null);
 
   protected readonly items = signal<string[]>([]);
   protected readonly draft = signal('');
   protected readonly notice = signal<string | null>(null);
-  protected readonly disabled = signal(false);
-  protected readonly full = computed(() => this.items().length >= this.maxItems());
+  protected readonly isDisabled = signal(false);
+  protected readonly isFull = computed(
+    () => this.items().length >= this.maxItems(),
+  );
 
-  private readonly box = viewChild.required<ElementRef<HTMLInputElement>>('box');
+  private readonly box =
+    viewChild.required<ElementRef<HTMLInputElement>>('box');
   private onChange: (value: string) => void = () => {};
   private onTouched: () => void = () => {};
 
@@ -59,16 +65,22 @@ export class RequirementsInput implements ControlValueAccessor {
   }
 
   setDisabledState(isDisabled: boolean): void {
-    this.disabled.set(isDisabled);
+    this.isDisabled.set(isDisabled);
+  }
+
+  /** Lets a parent form move the cursor here, e.g. to the first error. */
+  focus(): void {
+    this.box().nativeElement.focus();
   }
 
   protected onKeydown(event: KeyboardEvent): void {
+    const isEmpty = this.draft() === '';
     if (event.key === 'Enter') {
       event.preventDefault();
       this.add(this.draft());
-    } else if (event.key === 'Backspace' && this.draft() === '' && this.items().length) {
+    } else if (event.key === 'Backspace' && isEmpty && this.items().length) {
       event.preventDefault();
-      const last = this.items().at(-1)!;
+      const last = this.items().at(-1) ?? '';
       this.commit(this.items().slice(0, -1));
       this.setDraft(last);
     }
@@ -81,19 +93,22 @@ export class RequirementsInput implements ControlValueAccessor {
     this.add(text);
   }
 
-  /** Adds one or more lines. Strips list markers people paste from documents. */
+  /** Adds one or more lines. Strips list markers pasted from documents. */
   add(text: string): void {
     const lines = text
       .split(/\r?\n/)
-      .map((line) => line.replace(/^\s*(?:[-*•]|\d+[.)])\s+/, '').trim())
+      .map((line: string) => line.replace(LIST_MARKER, '').trim())
       .filter(Boolean);
     if (!lines.length) return;
 
     const next = [...this.items()];
     const skipped: string[] = [];
     for (const line of lines) {
-      const exists = next.some((item) => item.toLowerCase() === line.toLowerCase());
-      if (exists || next.length >= this.maxItems() || line.length > this.maxLength()) {
+      const isDuplicate = next.some(
+        (item: string) => item.toLowerCase() === line.toLowerCase(),
+      );
+      const isTooLong = line.length > this.maxLength();
+      if (isDuplicate || next.length >= this.maxItems() || isTooLong) {
         skipped.push(line);
       } else {
         next.push(line);
@@ -101,14 +116,15 @@ export class RequirementsInput implements ControlValueAccessor {
     }
 
     this.commit(next);
-    this.setDraft(skipped.length === 1 && lines.length === 1 ? skipped[0] : '');
+    const isSingleSkip = skipped.length === 1 && lines.length === 1;
+    this.setDraft(isSingleSkip ? skipped[0] : '');
     this.notice.set(this.explain(skipped, lines.length));
   }
 
   remove(index: number): void {
-    this.commit(this.items().filter((_, i) => i !== index));
+    this.commit(this.items().filter((_: string, i: number) => i !== index));
     this.notice.set(null);
-    this.box().nativeElement.focus();
+    this.focus();
   }
 
   protected touch(): void {
@@ -116,7 +132,10 @@ export class RequirementsInput implements ControlValueAccessor {
     this.onTouched();
   }
 
-  /** Writes to the element too, in case the template binding hasn't seen the typed text yet. */
+  /**
+   * Writes to the element too, in case the template binding hasn't seen
+   * the typed text yet.
+   */
   private setDraft(text: string): void {
     this.draft.set(text);
     this.box().nativeElement.value = text;
@@ -133,7 +152,10 @@ export class RequirementsInput implements ControlValueAccessor {
     if (first.length > this.maxLength()) {
       return `Keep each requirement under ${this.maxLength()} characters.`;
     }
-    if (this.full() && !this.items().some((i) => i.toLowerCase() === first.toLowerCase())) {
+    const isListed = this.items().some(
+      (item: string) => item.toLowerCase() === first.toLowerCase(),
+    );
+    if (this.isFull() && !isListed) {
       return `You can add up to ${this.maxItems()} requirements.`;
     }
     return total === 1

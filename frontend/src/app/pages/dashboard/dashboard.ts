@@ -1,5 +1,12 @@
 import { DatePipe } from '@angular/common';
-import { Component, computed, inject, input, OnInit, signal } from '@angular/core';
+import {
+  Component,
+  computed,
+  inject,
+  input,
+  OnInit,
+  signal,
+} from '@angular/core';
 import { environment } from '../../../environments/environment';
 import { apiErrorMessage } from '../../core/api/api-error';
 import { HealthService } from '../../core/api/health.service';
@@ -46,11 +53,18 @@ export class Dashboard implements OnInit {
 
   protected readonly greeting = computed(() => {
     const hour = new Date().getHours();
-    const part = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+    const part =
+      hour < 12
+        ? 'Good morning'
+        : hour < 18
+          ? 'Good afternoon'
+          : 'Good evening';
     return `${part}, ${this.auth.user()?.first_name ?? ''}`;
   });
 
-  protected readonly role = computed(() => this.auth.user()?.role ?? 'recruiter');
+  protected readonly role = computed(
+    () => this.auth.user()?.role ?? 'recruiter',
+  );
   protected readonly roleLabel = computed(() => ROLE_LABELS[this.role()]);
   protected readonly access = computed(() => ACCESS[this.role()]);
 

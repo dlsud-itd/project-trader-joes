@@ -138,8 +138,13 @@
 
   &.skeleton {
     height: 132px;
-    background: linear-gradient(90deg, var(--tf-surface), var(--tf-bg), var(--tf-surface)) 0 0 /
-      200% 100%;
+    background: linear-gradient(
+        90deg,
+        var(--tf-surface),
+        var(--tf-bg),
+        var(--tf-surface)
+      )
+      0 0 / 200% 100%;
     animation: shimmer 1.4s linear infinite;
   }
 
@@ -159,14 +164,14 @@
       font-size: 17px;
       overflow-wrap: anywhere;
     }
+  }
 
-    a {
-      color: inherit;
-      text-decoration: none;
+  &__title a {
+    color: inherit;
+    text-decoration: none;
 
-      &:hover {
-        color: var(--tf-accent);
-      }
+    &:hover {
+      color: var(--tf-accent);
     }
   }
 

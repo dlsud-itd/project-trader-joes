@@ -1,10 +1,13 @@
 import { CanDeactivateFn } from '@angular/router';
 
-export interface HasUnsavedChanges {
+export type HasUnsavedChanges = {
   hasUnsavedChanges(): boolean;
-}
+};
+
+const LEAVE_MESSAGE =
+  'You have unsaved changes. Leave this page and discard them?';
 
 /** Asks before leaving a form with edits that haven't been saved. */
-export const unsavedChangesGuard: CanDeactivateFn<HasUnsavedChanges> = (component) =>
-  !component.hasUnsavedChanges() ||
-  confirm('You have unsaved changes. Leave this page and discard them?');
+export const unsavedChangesGuard: CanDeactivateFn<HasUnsavedChanges> = (
+  component: HasUnsavedChanges,
+) => !component.hasUnsavedChanges() || confirm(LEAVE_MESSAGE);

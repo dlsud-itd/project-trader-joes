@@ -1,7 +1,8 @@
 <header class="bar">
   <div class="bar__inner">
     <a class="logo" routerLink="/dashboard">
-<img class="logo__mark" src="logo.svg" alt="" width="34" height="34" />      <span class="logo__name">TalentFlow</span>
+      <img class="logo__mark" src="logo.svg" alt="" width="34" height="34" />
+      <span class="logo__name">TalentFlow</span>
     </a>
 
     <nav class="nav" aria-label="Main">
@@ -18,7 +19,11 @@
         <span class="account__name">{{ auth.fullName() }}</span>
         <span class="account__role">{{ roleLabel() }}</span>
       </span>
-      <button class="tf-btn tf-btn--ghost account__logout" type="button" (click)="auth.logout()">
+      <button
+        class="tf-btn tf-btn--ghost account__logout"
+        type="button"
+        (click)="auth.logout()"
+      >
         Sign out
       </button>
     </div>

@@ -3,8 +3,8 @@
     <h1>Job postings</h1>
     <p>
       @if (canManage()) {
-        Create roles, set the requirements applicants are screened against, and open or close
-        intake.
+        Create roles, set the requirements applicants are screened against, and
+        open or close intake.
       } @else {
         Roles the team is hiring for. Only recruitment managers can change them.
       }
@@ -13,7 +13,12 @@
   @if (canManage()) {
     <a class="tf-btn tf-btn--primary" routerLink="/postings/new">
       <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
-        <path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+        <path
+          d="M8 3v10M3 8h10"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+        />
       </svg>
       New posting
     </a>
@@ -23,14 +28,21 @@
 @if (flash(); as message) {
   <div class="tf-alert tf-alert--success notice" role="status">
     <span>{{ message }}</span>
-    <button class="dismiss" type="button" aria-label="Dismiss" (click)="flash.set(null)">×</button>
+    <button
+      class="dismiss"
+      type="button"
+      aria-label="Dismiss"
+      (click)="flash.set(null)"
+    >
+      ×
+    </button>
   </div>
 }
 @if (actionError(); as message) {
   <div class="tf-alert tf-alert--error notice" role="alert">{{ message }}</div>
 }
 
-@if (loading()) {
+@if (isLoading()) {
   <div class="list" aria-busy="true" aria-label="Loading job postings">
     @for (n of [1, 2, 3]; track n) {
       <div class="item skeleton"></div>
@@ -39,7 +51,11 @@
 } @else if (loadError(); as message) {
   <div class="tf-alert tf-alert--error" role="alert">
     <span>{{ message }}</span>
-    <button class="tf-btn tf-btn--ghost tf-btn--sm" type="button" (click)="load()">
+    <button
+      class="tf-btn tf-btn--ghost tf-btn--sm"
+      type="button"
+      (click)="load()"
+    >
       Try again
     </button>
   </div>
@@ -47,8 +63,10 @@
   <section class="empty">
     <h2>No job postings yet</h2>
     @if (canManage()) {
-      <p>Create the first one. It shows on the careers page as soon as it’s open.</p>
-      <a class="tf-btn tf-btn--primary" routerLink="/postings/new">Create a posting</a>
+      <p>Create the first one. Open postings show on the careers page.</p>
+      <a class="tf-btn tf-btn--primary" routerLink="/postings/new"
+        >Create a posting</a
+      >
     } @else {
       <p>A recruitment manager hasn’t posted any roles yet.</p>
     }
@@ -70,7 +88,14 @@
     </div>
     <label class="search">
       <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true">
-        <circle cx="7" cy="7" r="4.5" fill="none" stroke="currentColor" stroke-width="1.6" />
+        <circle
+          cx="7"
+          cy="7"
+          r="4.5"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.6"
+        />
         <path
           d="M10.5 10.5L14 14"
           stroke="currentColor"
@@ -82,8 +107,7 @@
       <input
         type="search"
         placeholder="Search title, department, location"
-        [value]="query()"
-        (input)="query.set($any($event.target).value)"
+        [formControl]="searchControl"
       />
     </label>
   </div>
@@ -93,14 +117,16 @@
       @let reqs = requirementsPreview(posting);
       <li
         class="item"
-        [class.is-closed]="posting.status === 'closed'"
+        [class.is-closed]="posting.status === status.CLOSED"
         [class.is-highlighted]="isHighlighted(posting)"
       >
         <div class="item__main">
           <div class="item__title">
             <h2>
               @if (canManage()) {
-                <a [routerLink]="['/postings', posting.id, 'edit']">{{ posting.title }}</a>
+                <a [routerLink]="['/postings', posting.id, 'edit']">{{
+                  posting.title
+                }}</a>
               } @else {
                 {{ posting.title }}
               }
@@ -110,7 +136,8 @@
             }}</span>
           </div>
           <p class="item__meta">
-            {{ posting.department }} <span aria-hidden="true">·</span> {{ posting.location }}
+            {{ posting.department }} <span aria-hidden="true">·</span>
+            {{ posting.location }}
           </p>
           <ul class="chips" aria-label="Requirements">
             @for (req of reqs.shown; track req) {
@@ -125,7 +152,10 @@
             @if (posting.author) {
               by {{ posting.author.first_name }} {{ posting.author.last_name }}
             }
-            @if ((posting.updated_at | date: 'mediumDate') !== (posting.created_at | date: 'mediumDate')) {
+            @if (
+              (posting.updated_at | date: 'mediumDate') !==
+              (posting.created_at | date: 'mediumDate')
+            ) {
               <span aria-hidden="true">·</span> Updated
               {{ posting.updated_at | date: 'mediumDate' }}
             }
@@ -139,13 +169,17 @@
                 class="tf-switch"
                 type="button"
                 role="switch"
-                [attr.aria-checked]="posting.status === 'open'"
-                [attr.aria-label]="'Accepting applications for ' + posting.title"
-                [disabled]="pending().has(posting.id)"
+                [attr.aria-checked]="posting.status === status.OPEN"
+                [attr.aria-label]="
+                  'Accepting applications for ' + posting.title
+                "
+                [disabled]="pendingIds().has(posting.id)"
                 (click)="toggle(posting)"
               ></button>
               <span>{{
-                posting.status === 'open' ? 'Accepting applications' : 'Intake closed'
+                posting.status === status.OPEN
+                  ? 'Accepting applications'
+                  : 'Intake closed'
               }}</span>
             </div>
             <a
@@ -159,7 +193,7 @@
     } @empty {
       <li class="no-match">
         No postings match.
-        <button type="button" class="link" (click)="filter.set('all'); query.set('')">
+        <button type="button" class="link" (click)="clearFilters()">
           Clear filters
         </button>
       </li>
@@ -167,16 +201,31 @@
   </ul>
 }
 
-<dialog #confirmDialog class="confirm" (cancel)="cancelClose()" aria-labelledby="confirm-title">
+<dialog
+  #confirmDialog
+  class="confirm"
+  (cancel)="cancelClose()"
+  aria-labelledby="confirm-title"
+>
   @if (confirming(); as posting) {
     <h2 id="confirm-title">Close “{{ posting.title }}”?</h2>
     <p>
-      It disappears from the careers page and stops accepting applications. Applicants already in
-      the pipeline stay there. You can reopen it any time.
+      It disappears from the careers page and stops accepting applications.
+      Applicants already in the pipeline stay there. You can reopen it any time.
     </p>
     <div class="confirm__actions">
-      <button class="tf-btn tf-btn--ghost" type="button" (click)="cancelClose()">Keep open</button>
-      <button class="tf-btn tf-btn--primary confirm__close" type="button" (click)="confirmClose()">
+      <button
+        class="tf-btn tf-btn--ghost"
+        type="button"
+        (click)="cancelClose()"
+      >
+        Keep open
+      </button>
+      <button
+        class="tf-btn tf-btn--primary confirm__close"
+        type="button"
+        (click)="confirmClose()"
+      >
         Close posting
       </button>
     </div>

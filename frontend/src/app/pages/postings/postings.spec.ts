@@ -1,11 +1,14 @@
 import { provideHttpClient } from '@angular/common/http';
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import {
+  HttpTestingController,
+  provideHttpClientTesting,
+} from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
 import { environment } from '../../../environments/environment';
 import { AuthService } from '../../core/auth/auth.service';
-import { JobPosting } from '../../core/job-postings/job-postings.models';
+import { JobPosting, JobPostingStatus } from '../../core/job-postings';
 import { Postings } from './postings';
 
 const API = `${environment.apiUrl}/job-postings`;
@@ -17,7 +20,7 @@ const posting = (overrides: Partial<JobPosting>): JobPosting => ({
   location: 'Cavite',
   description: 'Develop and maintain software applications.',
   requirements: 'JavaScript\nSQL\nGit\nDocker\nAngular\nNestJS',
-  status: 'open',
+  status: JobPostingStatus.OPEN,
   created_by: 1,
   created_at: '2026-10-23T00:00:00Z',
   updated_at: '2026-10-23T00:00:00Z',
@@ -56,7 +59,9 @@ describe('Postings page', () => {
 
   beforeEach(() => {
     isManager = true;
-    HTMLDialogElement.prototype.showModal ??= function (this: HTMLDialogElement) {
+    HTMLDialogElement.prototype.showModal ??= function (
+      this: HTMLDialogElement,
+    ) {
       this.open = true;
     };
     HTMLDialogElement.prototype.close ??= function (this: HTMLDialogElement) {
@@ -66,8 +71,15 @@ describe('Postings page', () => {
 
   afterEach(() => http.verify());
 
-  it('lists postings with status counts and a requirement preview', async () => {
-    await render([posting({}), posting({ id: 2, title: 'HR Associate', status: 'closed' })]);
+  it('lists postings with status counts and requirements', async () => {
+    await render([
+      posting({}),
+      posting({
+        id: 2,
+        title: 'HR Associate',
+        status: JobPostingStatus.CLOSED,
+      }),
+    ]);
     expect(titles()).toEqual(['Software Developer', 'HR Associate']);
     expect(text()).toContain('+2 more');
     const counts = fixture.debugElement
@@ -77,8 +89,17 @@ describe('Postings page', () => {
   });
 
   it('filters by status', async () => {
-    await render([posting({}), posting({ id: 2, title: 'HR Associate', status: 'closed' })]);
-    fixture.debugElement.queryAll(By.css('.tabs button'))[2].nativeElement.click();
+    await render([
+      posting({}),
+      posting({
+        id: 2,
+        title: 'HR Associate',
+        status: JobPostingStatus.CLOSED,
+      }),
+    ]);
+    fixture.debugElement
+      .queryAll(By.css('.tabs button'))[2]
+      .nativeElement.click();
     fixture.detectChanges();
     expect(titles()).toEqual(['HR Associate']);
   });
@@ -91,28 +112,36 @@ describe('Postings page', () => {
 
     fixture.debugElement.query(By.css('.confirm__close')).nativeElement.click();
     const req = http.expectOne(`${API}/1/status`);
-    expect(req.request.body).toEqual({ status: 'closed' });
-    req.flush({ message: 'ok', job_posting: posting({ status: 'closed' }) });
+    expect(req.request.body).toEqual({ status: JobPostingStatus.CLOSED });
+    req.flush({
+      message: 'ok',
+      job_posting: posting({ status: JobPostingStatus.CLOSED }),
+    });
     await fixture.whenStable();
     fixture.detectChanges();
 
-    expect(fixture.debugElement.query(By.css('.tf-switch')).attributes['aria-checked']).toBe(
-      'false',
-    );
+    expect(
+      fixture.debugElement.query(By.css('.tf-switch')).attributes[
+        'aria-checked'
+      ],
+    ).toBe('false');
     expect(text()).toContain('no longer accepts applications');
   });
 
   it('reopens without asking', async () => {
-    await render([posting({ status: 'closed' })]);
+    await render([posting({ status: JobPostingStatus.CLOSED })]);
     fixture.debugElement.query(By.css('.tf-switch')).nativeElement.click();
-    http
-      .expectOne(`${API}/1/status`)
-      .flush({ message: 'ok', job_posting: posting({ status: 'open' }) });
+    http.expectOne(`${API}/1/status`).flush({
+      message: 'ok',
+      job_posting: posting({ status: JobPostingStatus.OPEN }),
+    });
     await fixture.whenStable();
     fixture.detectChanges();
-    expect(fixture.debugElement.query(By.css('.tf-switch')).attributes['aria-checked']).toBe(
-      'true',
-    );
+    expect(
+      fixture.debugElement.query(By.css('.tf-switch')).attributes[
+        'aria-checked'
+      ],
+    ).toBe('true');
   });
 
   it('hides management controls from recruiters', async () => {

@@ -1,10 +1,13 @@
 import { provideHttpClient } from '@angular/common/http';
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import {
+  HttpTestingController,
+  provideHttpClientTesting,
+} from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { provideRouter, Router } from '@angular/router';
 import { environment } from '../../../environments/environment';
-import { JobPosting } from '../../core/job-postings/job-postings.models';
+import { JobPosting, JobPostingStatus } from '../../core/job-postings';
 import { PostingForm } from './posting-form';
 
 const API = `${environment.apiUrl}/job-postings`;
@@ -16,7 +19,7 @@ const existing: JobPosting = {
   location: 'Cavite',
   description: 'Develop and maintain software applications.',
   requirements: 'JavaScript\nSQL',
-  status: 'open',
+  status: JobPostingStatus.OPEN,
   created_by: 1,
   created_at: '2026-10-23T00:00:00Z',
   updated_at: '2026-10-23T00:00:00Z',
@@ -30,7 +33,8 @@ describe('Posting form', () => {
   let navigate: ReturnType<typeof vi.spyOn>;
 
   const set = (id: string, value: string) => {
-    const el = fixture.debugElement.query(By.css(`#${id}`)).nativeElement as HTMLInputElement;
+    const el = fixture.debugElement.query(By.css(`#${id}`))
+      .nativeElement as HTMLInputElement;
     el.value = value;
     el.dispatchEvent(new Event('input'));
   };
@@ -42,12 +46,18 @@ describe('Posting form', () => {
   async function render(id?: string) {
     TestBed.configureTestingModule({
       imports: [PostingForm],
-      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+      ],
     });
     fixture = TestBed.createComponent(PostingForm);
     page = fixture.componentInstance;
     http = TestBed.inject(HttpTestingController);
-    navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    navigate = vi
+      .spyOn(TestBed.inject(Router), 'navigate')
+      .mockResolvedValue(true);
     if (id) fixture.componentRef.setInput('id', id);
     fixture.detectChanges();
     http.expectOne(API).flush([existing]); // department suggestions
@@ -82,7 +92,7 @@ describe('Posting form', () => {
       location: 'Makati',
       description: 'Plan and run manual and automated tests.',
       requirements: 'Test planning\nCypress',
-      status: 'open',
+      status: JobPostingStatus.OPEN,
     });
     req.flush({ message: 'ok', job_posting: { ...existing, id: 9 } });
     await fixture.whenStable();
@@ -95,15 +105,19 @@ describe('Posting form', () => {
     await render();
     set('title', 'Data Analyst');
     fixture.detectChanges();
-    expect(fixture.debugElement.query(By.css('.preview h2')).nativeElement.textContent).toContain(
-      'Data Analyst',
-    );
+    expect(
+      fixture.debugElement.query(By.css('.preview h2')).nativeElement
+        .textContent,
+    ).toContain('Data Analyst');
   });
 
-  it('loads an existing posting and sends only the changed fields', async () => {
+  it('loads a posting and sends only the changed fields', async () => {
     await render('7');
     expect(
-      (fixture.debugElement.query(By.css('#title')).nativeElement as HTMLInputElement).value,
+      (
+        fixture.debugElement.query(By.css('#title'))
+          .nativeElement as HTMLInputElement
+      ).value,
     ).toBe('Software Developer');
     expect(page.hasUnsavedChanges()).toBe(false);
 

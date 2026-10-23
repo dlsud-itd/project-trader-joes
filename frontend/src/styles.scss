@@ -6,13 +6,13 @@
 
 :root {
   /* Color — purple theme from the UI/UX mockup */
-  --tf-ink: #1a1530;          /* text, dark surfaces */
+  --tf-ink: #1a1530; /* text, dark surfaces */
   --tf-ink-soft: #3d3658;
   --tf-muted: #6e6a85;
   --tf-line: #eceaf4;
   --tf-bg: #f4f3fb;
   --tf-surface: #ffffff;
-  --tf-accent: #5b2ee5;       /* primary actions, links */
+  --tf-accent: #5b2ee5; /* primary actions, links */
   --tf-accent-strong: #4318c7;
   --tf-accent-soft: #eee9fd;
   --tf-amber: #c26a0a;
@@ -24,8 +24,10 @@
 
   /* Type */
   --tf-font-display: 'Plus Jakarta Sans', 'Segoe UI', system-ui, sans-serif;
-  --tf-font-body: 'Plus Jakarta Sans', 'Segoe UI', system-ui, -apple-system, sans-serif;
-  --tf-font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Code', Consolas, monospace;
+  --tf-font-body:
+    'Plus Jakarta Sans', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --tf-font-mono:
+    'JetBrains Mono', ui-monospace, 'Cascadia Code', Consolas, monospace;
 
   /* Shape — rounder cards like the mockup */
   --tf-radius-sm: 8px;
@@ -215,7 +217,10 @@ textarea {
   }
 }
 
-/* On/off switch. Markup: <button role="switch" class="tf-switch" [attr.aria-checked]="on"> */
+/*
+ * On/off switch. Markup:
+ * <button role="switch" class="tf-switch" [attr.aria-checked]="on">
+ */
 .tf-switch {
   position: relative;
   flex: none;
