@@ -6,6 +6,7 @@
 
     <nav class="nav" aria-label="Main">
       <a routerLink="/dashboard" routerLinkActive="is-active">Dashboard</a>
+      <a routerLink="/postings" routerLinkActive="is-active">Job postings</a>
       @if (auth.hasRole('manager')) {
         <a routerLink="/team" routerLinkActive="is-active">Team accounts</a>
       }

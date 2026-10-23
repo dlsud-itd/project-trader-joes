@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard, guestGuard, roleGuard } from './core/auth/auth.guards';
+import { unsavedChangesGuard } from './core/job-postings/unsaved-changes.guard';
 
 export const routes: Routes = [
   {
@@ -19,6 +20,25 @@ export const routes: Routes = [
         path: 'dashboard',
         title: 'Dashboard · TalentFlow',
         loadComponent: () => import('./pages/dashboard/dashboard').then((m) => m.Dashboard),
+      },
+      {
+        path: 'postings',
+        title: 'Job postings · TalentFlow',
+        loadComponent: () => import('./pages/postings/postings').then((m) => m.Postings),
+      },
+      {
+        path: 'postings/new',
+        title: 'New job posting · TalentFlow',
+        canActivate: [roleGuard('manager')],
+        canDeactivate: [unsavedChangesGuard],
+        loadComponent: () => import('./pages/posting-form/posting-form').then((m) => m.PostingForm),
+      },
+      {
+        path: 'postings/:id/edit',
+        title: 'Edit job posting · TalentFlow',
+        canActivate: [roleGuard('manager')],
+        canDeactivate: [unsavedChangesGuard],
+        loadComponent: () => import('./pages/posting-form/posting-form').then((m) => m.PostingForm),
       },
       {
         path: 'team',

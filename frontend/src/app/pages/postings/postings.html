@@ -1,0 +1,184 @@
+<header class="head">
+  <div>
+    <h1>Job postings</h1>
+    <p>
+      @if (canManage()) {
+        Create roles, set the requirements applicants are screened against, and open or close
+        intake.
+      } @else {
+        Roles the team is hiring for. Only recruitment managers can change them.
+      }
+    </p>
+  </div>
+  @if (canManage()) {
+    <a class="tf-btn tf-btn--primary" routerLink="/postings/new">
+      <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+        <path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+      </svg>
+      New posting
+    </a>
+  }
+</header>
+
+@if (flash(); as message) {
+  <div class="tf-alert tf-alert--success notice" role="status">
+    <span>{{ message }}</span>
+    <button class="dismiss" type="button" aria-label="Dismiss" (click)="flash.set(null)">×</button>
+  </div>
+}
+@if (actionError(); as message) {
+  <div class="tf-alert tf-alert--error notice" role="alert">{{ message }}</div>
+}
+
+@if (loading()) {
+  <div class="list" aria-busy="true" aria-label="Loading job postings">
+    @for (n of [1, 2, 3]; track n) {
+      <div class="item skeleton"></div>
+    }
+  </div>
+} @else if (loadError(); as message) {
+  <div class="tf-alert tf-alert--error" role="alert">
+    <span>{{ message }}</span>
+    <button class="tf-btn tf-btn--ghost tf-btn--sm" type="button" (click)="load()">
+      Try again
+    </button>
+  </div>
+} @else if (postings().length === 0) {
+  <section class="empty">
+    <h2>No job postings yet</h2>
+    @if (canManage()) {
+      <p>Create the first one. It shows on the careers page as soon as it’s open.</p>
+      <a class="tf-btn tf-btn--primary" routerLink="/postings/new">Create a posting</a>
+    } @else {
+      <p>A recruitment manager hasn’t posted any roles yet.</p>
+    }
+  </section>
+} @else {
+  <div class="toolbar">
+    <div class="tabs" role="group" aria-label="Filter by status">
+      @for (f of filters; track f.key) {
+        <button
+          type="button"
+          [class.is-active]="filter() === f.key"
+          [attr.aria-pressed]="filter() === f.key"
+          (click)="filter.set(f.key)"
+        >
+          {{ f.label }}
+          <span class="tabs__count">{{ counts()[f.key] }}</span>
+        </button>
+      }
+    </div>
+    <label class="search">
+      <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true">
+        <circle cx="7" cy="7" r="4.5" fill="none" stroke="currentColor" stroke-width="1.6" />
+        <path
+          d="M10.5 10.5L14 14"
+          stroke="currentColor"
+          stroke-width="1.6"
+          stroke-linecap="round"
+        />
+      </svg>
+      <span class="visually-hidden">Search postings</span>
+      <input
+        type="search"
+        placeholder="Search title, department, location"
+        [value]="query()"
+        (input)="query.set($any($event.target).value)"
+      />
+    </label>
+  </div>
+
+  <ul class="list">
+    @for (posting of visible(); track posting.id) {
+      @let reqs = requirementsPreview(posting);
+      <li
+        class="item"
+        [class.is-closed]="posting.status === 'closed'"
+        [class.is-highlighted]="isHighlighted(posting)"
+      >
+        <div class="item__main">
+          <div class="item__title">
+            <h2>
+              @if (canManage()) {
+                <a [routerLink]="['/postings', posting.id, 'edit']">{{ posting.title }}</a>
+              } @else {
+                {{ posting.title }}
+              }
+            </h2>
+            <span class="tf-status" [class]="'tf-status--' + posting.status">{{
+              statusLabels[posting.status]
+            }}</span>
+          </div>
+          <p class="item__meta">
+            {{ posting.department }} <span aria-hidden="true">·</span> {{ posting.location }}
+          </p>
+          <ul class="chips" aria-label="Requirements">
+            @for (req of reqs.shown; track req) {
+              <li>{{ req }}</li>
+            }
+            @if (reqs.more) {
+              <li class="chips__more">+{{ reqs.more }} more</li>
+            }
+          </ul>
+          <p class="item__by">
+            Posted {{ posting.created_at | date: 'mediumDate' }}
+            @if (posting.author) {
+              by {{ posting.author.first_name }} {{ posting.author.last_name }}
+            }
+            @if ((posting.updated_at | date: 'mediumDate') !== (posting.created_at | date: 'mediumDate')) {
+              <span aria-hidden="true">·</span> Updated
+              {{ posting.updated_at | date: 'mediumDate' }}
+            }
+          </p>
+        </div>
+
+        @if (canManage()) {
+          <div class="item__actions">
+            <div class="intake">
+              <button
+                class="tf-switch"
+                type="button"
+                role="switch"
+                [attr.aria-checked]="posting.status === 'open'"
+                [attr.aria-label]="'Accepting applications for ' + posting.title"
+                [disabled]="pending().has(posting.id)"
+                (click)="toggle(posting)"
+              ></button>
+              <span>{{
+                posting.status === 'open' ? 'Accepting applications' : 'Intake closed'
+              }}</span>
+            </div>
+            <a
+              class="tf-btn tf-btn--ghost tf-btn--sm"
+              [routerLink]="['/postings', posting.id, 'edit']"
+              >Edit</a
+            >
+          </div>
+        }
+      </li>
+    } @empty {
+      <li class="no-match">
+        No postings match.
+        <button type="button" class="link" (click)="filter.set('all'); query.set('')">
+          Clear filters
+        </button>
+      </li>
+    }
+  </ul>
+}
+
+<dialog #confirmDialog class="confirm" (cancel)="cancelClose()" aria-labelledby="confirm-title">
+  @if (confirming(); as posting) {
+    <h2 id="confirm-title">Close “{{ posting.title }}”?</h2>
+    <p>
+      It disappears from the careers page and stops accepting applications. Applicants already in
+      the pipeline stay there. You can reopen it any time.
+    </p>
+    <div class="confirm__actions">
+      <button class="tf-btn tf-btn--ghost" type="button" (click)="cancelClose()">Keep open</button>
+      <button class="tf-btn tf-btn--primary confirm__close" type="button" (click)="confirmClose()">
+        Close posting
+      </button>
+    </div>
+  }
+</dialog>

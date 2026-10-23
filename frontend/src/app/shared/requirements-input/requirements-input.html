@@ -1,0 +1,69 @@
+<div class="req" [class.is-invalid]="invalid()" [class.is-disabled]="disabled()">
+  @if (items().length) {
+    <ol class="req__list" aria-label="Requirements">
+      @for (item of items(); track item; let i = $index) {
+        <li class="req__item">
+          <span class="req__num" aria-hidden="true">{{ i + 1 }}</span>
+          <span class="req__text">{{ item }}</span>
+          <button
+            class="req__remove"
+            type="button"
+            [disabled]="disabled()"
+            [attr.aria-label]="'Remove ' + item"
+            (click)="remove(i)"
+          >
+            <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+              <path
+                d="M4 4l8 8M12 4l-8 8"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+              />
+            </svg>
+          </button>
+        </li>
+      }
+    </ol>
+  }
+
+  <div class="req__entry">
+    <input
+      #box
+      [id]="inputId()"
+      type="text"
+      autocomplete="off"
+      [attr.aria-describedby]="describedBy()"
+      [attr.aria-invalid]="invalid()"
+      [placeholder]="
+        full()
+          ? 'Requirement limit reached'
+          : items().length
+            ? 'Add another requirement'
+            : 'e.g. 2+ years with Angular or React'
+      "
+      [disabled]="disabled() || full()"
+      [value]="draft()"
+      (input)="draft.set(box.value); notice.set(null)"
+      (keydown)="onKeydown($event)"
+      (paste)="onPaste($event)"
+      (blur)="touch()"
+    />
+    <button
+      class="tf-btn tf-btn--ghost tf-btn--sm"
+      type="button"
+      [disabled]="disabled() || full() || !draft().trim()"
+      (click)="add(draft()); box.focus()"
+    >
+      Add
+    </button>
+  </div>
+</div>
+
+<div class="req__foot">
+  @if (notice(); as message) {
+    <span class="req__notice" role="status">{{ message }}</span>
+  } @else {
+    <span>Press Enter to add. Paste a list to add several at once.</span>
+  }
+  <span class="req__count" [class.is-full]="full()">{{ items().length }}/{{ maxItems() }}</span>
+</div>

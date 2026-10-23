@@ -21,6 +21,7 @@ const ACCESS: Record<UserRole, string[]> = {
     'Create staff accounts',
   ],
   recruiter: [
+    'View job postings',
     'View applicants and profiles (read-only)',
     'Rate applicants and add notes',
     'Search and sort applicants',
