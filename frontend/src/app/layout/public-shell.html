@@ -1,0 +1,18 @@
+<header class="bar">
+  <div class="bar__inner">
+    <a class="logo" routerLink="/careers">
+      <img src="logo.svg" alt="" width="32" height="32" />
+      <span class="logo__name">TalentFlow</span>
+      <span class="logo__tag">Careers</span>
+    </a>
+    <a class="staff" routerLink="/login">Staff sign in</a>
+  </div>
+</header>
+
+<main class="content">
+  <router-outlet />
+</main>
+
+<footer class="foot">
+  <p>© {{ year }} Trader Joe’s · TalentFlow</p>
+</footer>
