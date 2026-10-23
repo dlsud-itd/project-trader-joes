@@ -1,0 +1,236 @@
+<a class="back" routerLink="/postings">
+  <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+    <path
+      d="M10 3L5 8l5 5"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.8"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+  </svg>
+  Job postings
+</a>
+
+<header class="head">
+  <h1>{{ isEditing() ? 'Edit posting' : 'New job posting' }}</h1>
+  <p>
+    @if (isEditing()) {
+      Changes apply right away, including on the careers page if the posting is
+      open.
+    } @else {
+      Applicants see this on the careers page. The requirements are what resumes
+      get scored against.
+    }
+  </p>
+</header>
+
+@if (isLoading()) {
+  <div
+    class="card skeleton"
+    aria-busy="true"
+    aria-label="Loading posting"
+  ></div>
+} @else if (loadError(); as message) {
+  <div class="tf-alert tf-alert--error" role="alert">{{ message }}</div>
+} @else {
+  <div class="layout">
+    <form class="card" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      @if (error(); as message) {
+        <div class="tf-alert tf-alert--error" role="alert">{{ message }}</div>
+      }
+
+      <div class="tf-field">
+        <label for="title">Job title</label>
+        <input
+          id="title"
+          formControlName="title"
+          autocomplete="off"
+          placeholder="e.g. Software Developer"
+          [class.is-invalid]="hasFieldError('title')"
+          [attr.maxlength]="limit.TITLE_MAX"
+        />
+        @if (hasFieldError('title')) {
+          <span class="tf-error"
+            >Enter a title of at least {{ limit.TITLE_MIN }} characters.</span
+          >
+        }
+      </div>
+
+      <div class="row">
+        <div class="tf-field">
+          <label for="department">Department</label>
+          <input
+            id="department"
+            formControlName="department"
+            autocomplete="off"
+            list="department-options"
+            placeholder="e.g. IT"
+            [class.is-invalid]="hasFieldError('department')"
+            [attr.maxlength]="limit.DEPARTMENT_MAX"
+          />
+          <datalist id="department-options">
+            @for (name of departments(); track name) {
+              <option [value]="name"></option>
+            }
+          </datalist>
+          @if (hasFieldError('department')) {
+            <span class="tf-error">Enter a department.</span>
+          }
+        </div>
+        <div class="tf-field">
+          <label for="location">Location</label>
+          <input
+            id="location"
+            formControlName="location"
+            autocomplete="off"
+            placeholder="e.g. Dasmariñas, Cavite"
+            [class.is-invalid]="hasFieldError('location')"
+            [attr.maxlength]="limit.LOCATION_MAX"
+          />
+          @if (hasFieldError('location')) {
+            <span class="tf-error">Enter a location.</span>
+          }
+        </div>
+      </div>
+
+      <div class="tf-field">
+        <label for="description">Description</label>
+        <textarea
+          id="description"
+          formControlName="description"
+          rows="6"
+          placeholder="What the role is, who it reports to, and a typical week."
+          [class.is-invalid]="hasFieldError('description')"
+          [attr.maxlength]="limit.DESCRIPTION_MAX"
+        ></textarea>
+        <div class="split">
+          @if (hasFieldError('description')) {
+            <span class="tf-error"
+              >Write at least {{ limit.DESCRIPTION_MIN }} characters.</span
+            >
+          } @else {
+            <span class="tf-hint">Plain text. Line breaks are kept.</span>
+          }
+          <span class="tf-hint count"
+            >{{ descriptionLength() }}/{{ limit.DESCRIPTION_MAX }}</span
+          >
+        </div>
+      </div>
+
+      <div class="tf-field">
+        <label for="requirements">Requirements</label>
+        <span class="tf-hint" id="requirements-hint">
+          One skill or qualification per item. The AI scores each resume against
+          every item, so keep them specific.
+        </span>
+        <app-requirements-input
+          formControlName="requirements"
+          inputId="requirements"
+          describedBy="requirements-hint"
+          [maxItems]="limit.REQUIREMENTS_MAX"
+          [maxLength]="limit.REQUIREMENT_LENGTH_MAX"
+          [isInvalid]="hasFieldError('requirements')"
+        />
+        @if (hasFieldError('requirements')) {
+          <span class="tf-error">Add at least one requirement.</span>
+        }
+      </div>
+
+      <fieldset class="status">
+        <legend>Visibility</legend>
+        <label
+          class="option"
+          [class.is-selected]="value().status === status.OPEN"
+        >
+          <input type="radio" formControlName="status" [value]="status.OPEN" />
+          <span>
+            <strong>Open</strong>
+            <small
+              >Listed on the careers page and accepting applications.</small
+            >
+          </span>
+        </label>
+        <label
+          class="option"
+          [class.is-selected]="value().status === status.CLOSED"
+        >
+          <input
+            type="radio"
+            formControlName="status"
+            [value]="status.CLOSED"
+          />
+          <span>
+            <strong>Closed</strong>
+            <small>Hidden from applicants. You can open it later.</small>
+          </span>
+        </label>
+      </fieldset>
+
+      <div class="actions">
+        <button
+          class="tf-btn tf-btn--primary"
+          type="submit"
+          [disabled]="isSaving() || (isEditing() && !form.dirty)"
+        >
+          @if (isSaving()) {
+            <span class="tf-spinner" aria-hidden="true"></span>
+            Saving…
+          } @else {
+            {{
+              isEditing()
+                ? 'Save changes'
+                : value().status === status.OPEN
+                  ? 'Publish posting'
+                  : 'Save as closed'
+            }}
+          }
+        </button>
+        <a class="tf-btn tf-btn--ghost" routerLink="/postings">Cancel</a>
+      </div>
+    </form>
+
+    <aside class="preview" aria-label="Preview">
+      <p class="preview__label">Preview</p>
+      <article class="card preview__card">
+        <div class="preview__top">
+          <h2>{{ preview().title.trim() || 'Job title' }}</h2>
+          <span class="tf-status" [class]="'tf-status--' + preview().status">
+            {{ preview().status === status.OPEN ? 'Hiring' : 'Closed' }}
+          </span>
+        </div>
+        <p class="preview__meta">
+          <span>{{ preview().department.trim() || 'Department' }}</span>
+          <span aria-hidden="true">·</span>
+          <span>{{ preview().location.trim() || 'Location' }}</span>
+        </p>
+        <p
+          class="preview__desc"
+          [class.is-empty]="!preview().description.trim()"
+        >
+          {{ preview().description.trim() || 'The description appears here.' }}
+        </p>
+        <h3>Requirements</h3>
+        @if (preview().requirements.length) {
+          <ul class="preview__reqs">
+            @for (item of preview().requirements; track item) {
+              <li>{{ item }}</li>
+            }
+          </ul>
+        } @else {
+          <p class="preview__desc is-empty">Requirements appear here.</p>
+        }
+      </article>
+      @if (original(); as posting) {
+        <p class="preview__note">
+          Created by
+          {{
+            posting.author
+              ? posting.author.first_name + ' ' + posting.author.last_name
+              : 'a former user'
+          }}.
+        </p>
+      }
+    </aside>
+  </div>
+}
