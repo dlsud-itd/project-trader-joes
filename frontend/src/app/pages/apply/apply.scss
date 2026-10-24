@@ -1,0 +1,169 @@
+:host {
+  display: block;
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+.back {
+  display: inline-flex;
+  gap: 6px;
+  margin-bottom: 20px;
+  color: var(--tf-ink-soft);
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+
+  &:hover {
+    color: var(--tf-accent);
+  }
+}
+
+.head {
+  margin-bottom: 20px;
+
+  h1 {
+    font-size: clamp(24px, 3.4vw, 30px);
+    overflow-wrap: anywhere;
+  }
+
+  p {
+    margin: 6px 0 0;
+    color: var(--tf-muted);
+  }
+}
+
+.card {
+  display: grid;
+  gap: 24px;
+  padding: 28px;
+  border: 1px solid var(--tf-line);
+  border-radius: var(--tf-radius);
+  background: var(--tf-surface);
+}
+
+.group {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+
+  legend {
+    margin-bottom: 12px;
+    padding: 0;
+    font-family: var(--tf-font-display);
+    font-size: 16px;
+    font-weight: 700;
+  }
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.optional {
+  color: var(--tf-muted);
+  font-weight: 400;
+}
+
+.counter {
+  justify-self: end;
+  font-variant-numeric: tabular-nums;
+
+  &.is-over {
+    color: var(--tf-danger);
+  }
+}
+
+.actions {
+  display: grid;
+  gap: 10px;
+
+  .tf-btn {
+    width: 100%;
+  }
+
+  &__note {
+    margin: 0;
+    color: var(--tf-muted);
+    font-size: 12.5px;
+    text-align: center;
+  }
+}
+
+.done,
+.empty {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  padding: 48px 28px;
+  border: 1px solid var(--tf-line);
+  border-radius: var(--tf-radius);
+  background: var(--tf-surface);
+  text-align: center;
+
+  h1 {
+    font-size: 24px;
+  }
+
+  p {
+    max-width: 46ch;
+    margin: 0;
+    color: var(--tf-ink-soft);
+  }
+}
+
+.empty {
+  border-style: dashed;
+}
+
+.done__icon {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--tf-success-soft);
+  color: var(--tf-success);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.skeleton {
+  height: 520px;
+  border-radius: var(--tf-radius);
+  background: linear-gradient(
+      90deg,
+      var(--tf-surface),
+      var(--tf-bg),
+      var(--tf-surface)
+    )
+    0 0 / 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .card {
+    padding: 20px;
+  }
+
+  .row {
+    grid-template-columns: 1fr;
+  }
+}
