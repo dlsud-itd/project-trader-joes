@@ -1,0 +1,62 @@
+@if (file(); as chosen) {
+  <div class="chosen">
+    <span class="chosen__icon" aria-hidden="true">
+      {{ chosen.name.toLowerCase().endsWith('.pdf') ? 'PDF' : 'DOC' }}
+    </span>
+    <span class="chosen__text">
+      <span class="chosen__name">{{ chosen.name }}</span>
+      <span class="chosen__size">{{ formatSize(chosen.size) }}</span>
+    </span>
+    <button
+      class="tf-btn tf-btn--ghost tf-btn--sm"
+      type="button"
+      [disabled]="isDisabled()"
+      (click)="remove()"
+    >
+      Remove
+    </button>
+  </div>
+}
+
+<label
+  class="drop"
+  [class.is-hidden]="file()"
+  [class.is-dragging]="isDragging()"
+  [class.is-invalid]="isMissing() || error()"
+  [attr.for]="inputId()"
+  (dragover)="onDragOver($event)"
+  (dragleave)="isDragging.set(false)"
+  (drop)="onDrop($event)"
+>
+  <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">
+    <path
+      d="M12 16V4m0 0l-4.5 4.5M12 4l4.5 4.5
+        M5 15v3a2 2 0 002 2h10a2 2 0 002-2v-3"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.7"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+  </svg>
+  <span class="drop__title"
+    ><span class="drop__link">Choose a file</span> or drag it here</span
+  >
+  <span class="drop__hint">PDF or Word (.docx), up to 5 MB</span>
+  <input
+    #picker
+    class="drop__input"
+    type="file"
+    [id]="inputId()"
+    [accept]="accept"
+    [disabled]="isDisabled()"
+    [attr.aria-invalid]="isMissing() || !!error()"
+    (change)="onPick($event)"
+  />
+</label>
+
+@if (error(); as message) {
+  <span class="tf-error" role="alert">{{ message }}</span>
+} @else if (isMissing() && !file()) {
+  <span class="tf-error">Attach your resume.</span>
+}
