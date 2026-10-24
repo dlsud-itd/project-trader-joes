@@ -8,7 +8,10 @@ import { HttpExceptionFilter } from '../src/common/filters/http-exception.filter
 import { signUploadToken } from '../src/common/upload-token/upload-token.js';
 import { DB, type Database } from '../src/database/database.module.js';
 import { applications, jobPostings } from '../src/database/schema.js';
-import { RESUME_MAX_BYTES } from '../src/resumes/resume-file.js';
+import {
+  RESUME_MAX_BYTES,
+  RESUME_MIME_TYPES,
+} from '../src/resumes/resume-file.js';
 
 /**
  * Runs against the database in backend/.env (seeded sample accounts required).
@@ -128,6 +131,14 @@ describe('Resumes (e2e)', () => {
     expect(Buffer.compare(download.body as Buffer, pdf)).toBe(0);
   });
 
+  it('stores a .docx with the Word MIME type', async () => {
+    const { id, token } = await apply();
+    const docx = Buffer.from([0x50, 0x4b, 0x03, 0x04, 0x14, 0x00]);
+    const { body } = await upload(id, token, docx, 'Juan CV.docx').expect(201);
+    expect(body.resume.mime_type).toBe(RESUME_MIME_TYPES.docx);
+    expect(body.resume).not.toHaveProperty('data');
+  });
+
   it('keeps downloads behind sign-in (401)', async () => {
     const { id, token } = await apply();
     const { body } = await upload(id, token, pdf).expect(201);
@@ -159,11 +170,20 @@ describe('Resumes (e2e)', () => {
 
   it('rejects a request without a file (400)', async () => {
     const { id, token } = await apply();
-    await api()
+    const { body } = await api()
       .post('/api/resumes')
       .field('application_id', String(id))
       .field('upload_token', token)
       .expect(400);
+    expect(body.error).toBe('Invalid or missing resume document.');
+  });
+
+  it('returns 404 for an unknown resume id', async () => {
+    const { body } = await api()
+      .get('/api/resumes/999999/file')
+      .set(manager)
+      .expect(404);
+    expect(body.error).toBe('Resume not found.');
   });
 
   it('rejects files over 5 MB (413)', async () => {
