@@ -1,0 +1,117 @@
+<header class="hero">
+  <h1>Work with us</h1>
+  <p>
+    Browse our open roles and apply in a few minutes. Every application is read
+    by the hiring team.
+  </p>
+</header>
+
+@if (isLoading()) {
+  <div class="list" aria-busy="true" aria-label="Loading open roles">
+    @for (n of [1, 2, 3]; track n) {
+      <div class="card skeleton"></div>
+    }
+  </div>
+} @else if (loadError(); as message) {
+  <div class="tf-alert tf-alert--error" role="alert">
+    <span>{{ message }}</span>
+    <button
+      class="tf-btn tf-btn--ghost tf-btn--sm"
+      type="button"
+      (click)="load()"
+    >
+      Try again
+    </button>
+  </div>
+} @else if (postings().length === 0) {
+  <section class="empty">
+    <h2>No open roles right now</h2>
+    <p>We’re not hiring at the moment. Check back soon.</p>
+  </section>
+} @else {
+  <div class="toolbar">
+    <p class="count">
+      {{ postings().length }} open
+      {{ postings().length === 1 ? 'role' : 'roles' }}
+    </p>
+    <label class="search">
+      <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true">
+        <circle
+          cx="7"
+          cy="7"
+          r="4.5"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.6"
+        />
+        <path
+          d="M10.5 10.5L14 14"
+          stroke="currentColor"
+          stroke-width="1.6"
+          stroke-linecap="round"
+        />
+      </svg>
+      <span class="visually-hidden">Search roles</span>
+      <input
+        type="search"
+        placeholder="Search title, department, location"
+        [formControl]="searchControl"
+      />
+    </label>
+  </div>
+
+  @if (departments().length > 1) {
+    <div class="departments" role="group" aria-label="Filter by department">
+      @for (name of departments(); track name) {
+        <button
+          type="button"
+          [class.is-active]="department() === name"
+          [attr.aria-pressed]="department() === name"
+          (click)="toggleDepartment(name)"
+        >
+          {{ name }}
+        </button>
+      }
+    </div>
+  }
+
+  <ul class="list">
+    @for (posting of visible(); track posting.id) {
+      @let reqs = requirementsPreview(posting);
+      <li>
+        <a class="card" [routerLink]="['/careers', posting.id]">
+          <div class="card__main">
+            <h2>{{ posting.title }}</h2>
+            <p class="card__meta">
+              {{ posting.department }} <span aria-hidden="true">·</span>
+              {{ posting.location }}
+            </p>
+            <ul class="chips" aria-label="Requirements">
+              @for (req of reqs.shown; track req) {
+                <li>{{ req }}</li>
+              }
+              @if (reqs.more) {
+                <li class="chips__more">+{{ reqs.more }} more</li>
+              }
+            </ul>
+          </div>
+          <div class="card__side">
+            <span class="card__date"
+              >Posted {{ posting.created_at | date: 'mediumDate' }}</span
+            >
+            <span class="card__cta"
+              >View role <span aria-hidden="true">→</span></span
+            >
+          </div>
+        </a>
+      </li>
+    } @empty {
+      <li class="no-match">
+        No roles match.
+        <button type="button" class="link" (click)="clearFilters()">
+          Clear filters
+        </button>
+      </li>
+    }
+  </ul>
+}
