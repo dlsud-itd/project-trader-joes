@@ -57,6 +57,20 @@ export const routes: Routes = [
     ],
   },
   {
+    // Public apply form. Kept apart from the careers routes above,
+    // so the two can be added in either order.
+    path: 'careers/:id/apply',
+    loadComponent: () =>
+      import('./layout/public-shell').then((m) => m.PublicShell),
+    children: [
+      {
+        path: '',
+        title: 'Apply · TalentFlow',
+        loadComponent: () => import('./pages/apply/apply').then((m) => m.Apply),
+      },
+    ],
+  },
+  {
     path: '**',
     title: 'Page not found · TalentFlow',
     loadComponent: () =>

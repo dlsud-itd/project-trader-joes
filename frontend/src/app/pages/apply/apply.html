@@ -1,0 +1,212 @@
+@if (isLoading()) {
+  <div class="skeleton" aria-busy="true" aria-label="Loading role"></div>
+} @else if (isUnavailable()) {
+  <section class="empty">
+    <h1>This role is no longer accepting applications</h1>
+    <p>
+      It may have been filled or closed. Take a look at our other open roles.
+    </p>
+    <a class="tf-btn tf-btn--primary" routerLink="/careers">See open roles</a>
+  </section>
+} @else if (loadError(); as message) {
+  <div class="tf-alert tf-alert--error" role="alert">
+    <span>{{ message }}</span>
+    <button
+      class="tf-btn tf-btn--ghost tf-btn--sm"
+      type="button"
+      (click)="load()"
+    >
+      Try again
+    </button>
+  </div>
+} @else if (posting(); as p) {
+  @if (step() === applyStep.DONE) {
+    <section class="done" role="status">
+      <span class="done__icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="28" height="28">
+          <path
+            d="M6 12.5l4 4 8-9"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+      </span>
+      <h1>Application sent</h1>
+      <p>
+        Thanks for applying for <strong>{{ p.title }}</strong
+        >. The hiring team will review your resume and contact you at
+        <strong>{{ sentTo() }}</strong
+        >.
+      </p>
+      <a class="tf-btn tf-btn--ghost" routerLink="/careers"
+        >See other open roles</a
+      >
+    </section>
+  } @else {
+    <a class="back" [routerLink]="['/careers', p.id]"
+      ><span aria-hidden="true">←</span> Back to the role</a
+    >
+
+    <header class="head">
+      <h1>Apply for {{ p.title }}</h1>
+      <p>
+        {{ p.department }} <span aria-hidden="true">·</span> {{ p.location }}
+      </p>
+    </header>
+
+    <form class="card" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      @if (error(); as message) {
+        <div class="tf-alert tf-alert--error" role="alert">
+          <span>
+            {{ message }}
+            @if (step() === applyStep.UPLOAD_FAILED) {
+              Your details were saved. Only the resume needs to be sent again.
+            }
+          </span>
+        </div>
+      }
+
+      <fieldset class="group">
+        <legend>Your details</legend>
+
+        <div class="tf-field">
+          <label for="full_name">Full name</label>
+          <input
+            id="full_name"
+            formControlName="full_name"
+            autocomplete="name"
+            [class.is-invalid]="hasFieldError('full_name')"
+            [attr.aria-invalid]="hasFieldError('full_name')"
+          />
+          @if (hasFieldError('full_name')) {
+            <span class="tf-error">Enter your full name.</span>
+          }
+        </div>
+
+        <div class="row">
+          <div class="tf-field">
+            <label for="email">Email</label>
+            <input
+              id="email"
+              type="email"
+              formControlName="email"
+              autocomplete="email"
+              placeholder="you@example.com"
+              [class.is-invalid]="hasFieldError('email')"
+              [attr.aria-invalid]="hasFieldError('email')"
+            />
+            @if (hasFieldError('email')) {
+              <span class="tf-error">Enter a valid email address.</span>
+            }
+          </div>
+
+          <div class="tf-field">
+            <label for="phone"
+              >Phone <span class="optional">(optional)</span></label
+            >
+            <input
+              id="phone"
+              type="tel"
+              formControlName="phone"
+              autocomplete="tel"
+              placeholder="+63 917 123 4567"
+              [class.is-invalid]="hasFieldError('phone')"
+              [attr.aria-invalid]="hasFieldError('phone')"
+            />
+            @if (hasFieldError('phone')) {
+              <span class="tf-error"
+                >Enter a valid phone number, e.g. +63 917 123 4567.</span
+              >
+            }
+          </div>
+        </div>
+
+        <div class="tf-field">
+          <label for="portfolio_url">
+            Portfolio, GitHub, or LinkedIn
+            <span class="optional">(optional)</span>
+          </label>
+          <input
+            id="portfolio_url"
+            type="url"
+            formControlName="portfolio_url"
+            placeholder="https://"
+            [class.is-invalid]="hasFieldError('portfolio_url')"
+            [attr.aria-invalid]="hasFieldError('portfolio_url')"
+          />
+          @if (hasFieldError('portfolio_url')) {
+            <span class="tf-error"
+              >Enter a full link starting with https://.</span
+            >
+          }
+        </div>
+      </fieldset>
+
+      <fieldset class="group">
+        <legend>Resume</legend>
+        <app-resume-input
+          inputId="resume"
+          [(file)]="resume"
+          [isMissing]="hasSubmitted() && !resume()"
+          [isDisabled]="isBusy() || step() === applyStep.DONE"
+        />
+      </fieldset>
+
+      <fieldset class="group">
+        <legend>Cover note <span class="optional">(optional)</span></legend>
+        <div class="tf-field">
+          <label class="visually-hidden" for="cover_note">Cover note</label>
+          <textarea
+            id="cover_note"
+            formControlName="cover_note"
+            rows="5"
+            placeholder="Anything you’d like the hiring team to know"
+            [class.is-invalid]="hasFieldError('cover_note')"
+          ></textarea>
+          <span
+            class="tf-hint counter"
+            [class.is-over]="hasFieldError('cover_note')"
+          >
+            {{ form.controls.cover_note.value.length }} /
+            {{ limit.COVER_NOTE_MAX }}
+          </span>
+        </div>
+      </fieldset>
+
+      <div class="actions">
+        @if (step() === applyStep.UPLOAD_FAILED) {
+          <button
+            class="tf-btn tf-btn--primary"
+            type="button"
+            (click)="retryUpload()"
+          >
+            Send resume again
+          </button>
+        } @else {
+          <button
+            class="tf-btn tf-btn--primary"
+            type="submit"
+            [disabled]="isBusy()"
+          >
+            @if (step() === applyStep.SENDING) {
+              <span class="tf-spinner" aria-hidden="true"></span>
+              Sending application…
+            } @else if (step() === applyStep.UPLOADING) {
+              <span class="tf-spinner" aria-hidden="true"></span>
+              Uploading resume…
+            } @else {
+              Submit application
+            }
+          </button>
+        }
+        <p class="actions__note">
+          Your details are only shared with the TalentFlow hiring team for this
+          role.
+        </p>
+      </div>
+    </form>
+  }
+}
