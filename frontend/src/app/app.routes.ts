@@ -9,6 +9,28 @@ export const routes: Routes = [
     title: 'Sign in · TalentFlow',
     loadComponent: () => import('./pages/login/login').then((m) => m.Login),
   },
+    {
+    // Public pages for applicants. No sign-in needed.
+    path: 'careers',
+    loadComponent: () =>
+      import('./layout/public-shell').then((m) => m.PublicShell),
+    children: [
+      {
+        path: '',
+        title: 'Careers · TalentFlow',
+        loadComponent: () =>
+          import('./pages/careers/careers').then((m) => m.Careers),
+      },
+      {
+        path: ':id',
+        title: 'Careers · TalentFlow',
+        loadComponent: () =>
+          import('./pages/career-detail/career-detail').then(
+            (m) => m.CareerDetail,
+          ),
+      },
+    ],
+  },
   {
     // Everything inside the shell requires a signed-in user.
     path: '',

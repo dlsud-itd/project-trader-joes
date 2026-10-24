@@ -1,0 +1,64 @@
+<a class="back" routerLink="/careers"
+  ><span aria-hidden="true">←</span> All open roles</a
+>
+
+@if (isLoading()) {
+  <div class="skeleton" aria-busy="true" aria-label="Loading role"></div>
+} @else if (isUnavailable()) {
+  <section class="empty">
+    <h1>This role is no longer available</h1>
+    <p>
+      It may have been filled or closed. Take a look at our other open roles.
+    </p>
+    <a class="tf-btn tf-btn--primary" routerLink="/careers">See open roles</a>
+  </section>
+} @else if (loadError(); as message) {
+  <div class="tf-alert tf-alert--error" role="alert">
+    <span>{{ message }}</span>
+    <button
+      class="tf-btn tf-btn--ghost tf-btn--sm"
+      type="button"
+      (click)="load()"
+    >
+      Try again
+    </button>
+  </div>
+} @else if (posting(); as p) {
+  <div class="layout">
+    <article class="main">
+      <header class="head">
+        <h1>{{ p.title }}</h1>
+        <p class="meta">
+          {{ p.department }} <span aria-hidden="true">·</span> {{ p.location }}
+          <span aria-hidden="true">·</span> Posted
+          {{ p.created_at | date: 'mediumDate' }}
+        </p>
+      </header>
+
+      <section>
+        <h2>About the role</h2>
+        <p class="description">{{ p.description }}</p>
+      </section>
+
+      <section>
+        <h2>What we’re looking for</h2>
+        <ul class="requirements">
+          @for (req of requirements(); track req) {
+            <li>{{ req }}</li>
+          }
+        </ul>
+      </section>
+    </article>
+
+    <aside class="apply">
+      <h2>Interested?</h2>
+      <p>Send your details and resume. It takes about 3 minutes.</p>
+      <a
+        class="tf-btn tf-btn--primary"
+        [routerLink]="['/careers', p.id, 'apply']"
+        >Apply now</a
+      >
+      <p class="apply__note">PDF or Word (.docx) resume, up to 5 MB.</p>
+    </aside>
+  </div>
+}

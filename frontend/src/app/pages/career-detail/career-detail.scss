@@ -1,0 +1,171 @@
+.back {
+  display: inline-flex;
+  gap: 6px;
+  margin-bottom: 20px;
+  color: var(--tf-ink-soft);
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+
+  &:hover {
+    color: var(--tf-accent);
+  }
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 24px;
+  align-items: start;
+}
+
+.main {
+  display: grid;
+  gap: 28px;
+  padding: 28px;
+  border: 1px solid var(--tf-line);
+  border-radius: var(--tf-radius);
+  background: var(--tf-surface);
+
+  h2 {
+    margin-bottom: 10px;
+    font-size: 17px;
+  }
+}
+
+.head {
+  h1 {
+    font-size: clamp(24px, 3.4vw, 32px);
+    overflow-wrap: anywhere;
+  }
+}
+
+.meta {
+  margin: 8px 0 0;
+  color: var(--tf-muted);
+  font-size: 14px;
+}
+
+.description {
+  margin: 0;
+  color: var(--tf-ink-soft);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.requirements {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    position: relative;
+    padding-left: 26px;
+    color: var(--tf-ink-soft);
+
+    &::before {
+      content: '';
+      position: absolute;
+      top: 5px;
+      left: 0;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--tf-accent-soft);
+    }
+
+    /* Checkmark drawn with two borders, rotated. */
+    &::after {
+      content: '';
+      position: absolute;
+      top: 8px;
+      left: 6px;
+      width: 4px;
+      height: 7px;
+      border: solid var(--tf-accent);
+      border-width: 0 2px 2px 0;
+      transform: rotate(45deg);
+    }
+  }
+}
+
+.apply {
+  position: sticky;
+  top: 24px;
+  display: grid;
+  gap: 12px;
+  padding: 22px;
+  border: 1px solid var(--tf-line);
+  border-radius: var(--tf-radius);
+  background: var(--tf-surface);
+  box-shadow: var(--tf-shadow);
+
+  h2 {
+    font-size: 18px;
+  }
+
+  p {
+    margin: 0;
+    color: var(--tf-muted);
+    font-size: 14px;
+  }
+
+  &__note {
+    font-size: 12.5px !important;
+  }
+}
+
+.empty {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  padding: 48px 24px;
+  border: 1px dashed var(--tf-line);
+  border-radius: var(--tf-radius);
+  background: var(--tf-surface);
+  text-align: center;
+
+  h1 {
+    font-size: 22px;
+  }
+
+  p {
+    margin: 0;
+    color: var(--tf-muted);
+  }
+}
+
+.skeleton {
+  height: 420px;
+  border-radius: var(--tf-radius);
+  background: linear-gradient(
+      90deg,
+      var(--tf-surface),
+      var(--tf-bg),
+      var(--tf-surface)
+    )
+    0 0 / 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media (max-width: 760px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .main {
+    padding: 20px;
+  }
+
+  .apply {
+    position: static;
+  }
+}
