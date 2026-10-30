@@ -187,6 +187,15 @@
               [routerLink]="['/postings', posting.id, 'edit']"
               >Edit</a
             >
+            <button
+              class="tf-btn tf-btn--ghost tf-btn--sm item__delete"
+              type="button"
+              [attr.aria-label]="'Delete ' + posting.title"
+              [disabled]="pendingIds().has(posting.id)"
+              (click)="askDelete(posting)"
+            >
+              Delete
+            </button>
           </div>
         }
       </li>
@@ -227,6 +236,37 @@
         (click)="confirmClose()"
       >
         Close posting
+      </button>
+    </div>
+  }
+</dialog>
+
+<dialog
+  #deleteDialog
+  class="confirm"
+  (cancel)="cancelDelete()"
+  aria-labelledby="delete-title"
+>
+  @if (deleting(); as posting) {
+    <h2 id="delete-title">Delete “{{ posting.title }}”?</h2>
+    <p>
+      This removes the posting for good. Postings that already have applicants
+      can’t be deleted; close them instead so their applications are kept.
+    </p>
+    <div class="confirm__actions">
+      <button
+        class="tf-btn tf-btn--ghost"
+        type="button"
+        (click)="cancelDelete()"
+      >
+        Keep posting
+      </button>
+      <button
+        class="tf-btn tf-btn--primary confirm__close confirm__delete"
+        type="button"
+        (click)="confirmDelete()"
+      >
+        Delete posting
       </button>
     </div>
   }
