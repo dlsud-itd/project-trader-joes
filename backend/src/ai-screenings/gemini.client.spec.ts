@@ -56,6 +56,7 @@ describe('GeminiClient', () => {
         temperature: 0,
         responseMimeType: 'application/json',
         responseSchema: { type: 'OBJECT' },
+        thinkingConfig: { thinkingLevel: 'low' },
       },
     });
   });

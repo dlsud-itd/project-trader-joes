@@ -1,11 +1,14 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
-/** Used when GEMINI_MODEL is not set. Any Gemini model with JSON output works. */
-export const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash';
+/**
+ * Used when GEMINI_MODEL is not set. Fast and open to new API keys
+ * (gemini-2.5-* is not). Any Gemini 3+ model with JSON output works.
+ */
+export const DEFAULT_GEMINI_MODEL = 'gemini-3.5-flash';
 
 const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
-const TIMEOUT_MS = 30_000;
+const TIMEOUT_MS = 60_000;
 
 export type GeminiRequest = {
   systemPrompt: string;
@@ -64,6 +67,8 @@ export class GeminiClient {
             temperature: 0,
             responseMimeType: 'application/json',
             responseSchema,
+            // Matching requirements needs little reasoning; low is faster.
+            thinkingConfig: { thinkingLevel: 'low' },
           },
         }),
         signal: AbortSignal.timeout(TIMEOUT_MS),
