@@ -60,6 +60,11 @@ export type JobPostingResponse = {
   job_posting: JobPosting;
 };
 
+/** DELETE /api/job-postings/:id only sends a message back. */
+export type DeleteJobPostingResponse = {
+  message: string;
+};
+
 export function splitRequirements(text: string | null | undefined): string[] {
   return (text ?? '')
     .split('\n')

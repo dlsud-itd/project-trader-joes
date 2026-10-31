@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   NotFoundException,
   Param,
@@ -31,7 +32,8 @@ const postingId = () =>
 /**
  * Job postings (API spec II).
  * Reading is public so the careers page can list open roles; signed-in staff
- * also see closed postings. Only recruitment managers create, edit, or close them.
+ * also see closed postings. Only recruitment managers create, edit, close, or
+ * delete them.
  */
 @ApiTags('Job postings')
 @ApiBearerAuth()
@@ -73,6 +75,17 @@ export class JobPostingsController {
   ) {
     const job_posting = await this.postings.update(id, dto);
     return { message: 'Job posting updated successfully.', job_posting };
+  }
+
+  /**
+   * DELETE /api/job-postings/:id — only postings without applicants;
+   * the rest are closed instead so their applications are kept.
+   */
+  @Roles('manager')
+  @Delete(':id')
+  async remove(@Param('id', postingId()) id: number) {
+    await this.postings.remove(id);
+    return { message: 'Job posting deleted.' };
   }
 
   /** PATCH /api/job-postings/:id/status — open or close intake. */

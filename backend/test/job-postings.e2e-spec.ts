@@ -6,11 +6,11 @@ import request from 'supertest';
 import { AppModule } from '../src/app.module.js';
 import { HttpExceptionFilter } from '../src/common/filters/http-exception.filter.js';
 import { DB, type Database } from '../src/database/database.module.js';
-import { jobPostings } from '../src/database/schema.js';
+import { applications, jobPostings } from '../src/database/schema.js';
 
 /**
  * Runs against the database in backend/.env (seeded sample accounts required).
- * Every posting created here is deleted afterwards.
+ * Every posting (and test application) created here is deleted afterwards.
  * Run with: npm run test:e2e
  */
 describe('Job postings (e2e)', () => {
@@ -68,10 +68,12 @@ describe('Job postings (e2e)', () => {
 
   afterAll(async () => {
     if (created.length) {
-      await app
-        .get<Database>(DB)
-        .delete(jobPostings)
-        .where(inArray(jobPostings.id, created));
+      const db = app.get<Database>(DB);
+      // Applications block deleting their posting, so remove them first.
+      await db
+        .delete(applications)
+        .where(inArray(applications.job_posting_id, created));
+      await db.delete(jobPostings).where(inArray(jobPostings.id, created));
     }
     await app.close();
   });
@@ -170,4 +172,41 @@ describe('Job postings (e2e)', () => {
     expect(res.body).not.toHaveProperty('created_by');
     expect(res.body).not.toHaveProperty('author');
   });
+
+  it('lets a manager delete a posting nobody applied to', async () => {
+    const { id } = await createPosting();
+
+    const res = await api()
+      .delete(`/api/job-postings/${id}`)
+      .set(manager)
+      .expect(200);
+
+    expect(res.body.message).toBe('Job posting deleted.');
+    await api().get(`/api/job-postings/${id}`).set(manager).expect(404);
+  });
+
+  it('refuses to delete a posting with applicants (409)', async () => {
+    const { id } = await createPosting();
+    await app
+      .get<Database>(DB)
+      .insert(applications)
+      .values({ job_posting_id: id });
+
+    const res = await api()
+      .delete(`/api/job-postings/${id}`)
+      .set(manager)
+      .expect(409);
+
+    expect(res.body.error).toMatch(/Close it instead/);
+    await api().get(`/api/job-postings/${id}`).set(manager).expect(200);
+  });
+
+  it('only lets managers delete (403 recruiter, 401 visitor)', async () => {
+    const { id } = await createPosting();
+    await api().delete(`/api/job-postings/${id}`).set(recruiter).expect(403);
+    await api().delete(`/api/job-postings/${id}`).expect(401);
+  });
+
+  it('returns 404 when deleting a posting that does not exist', () =>
+    api().delete('/api/job-postings/999999999').set(manager).expect(404));
 });
