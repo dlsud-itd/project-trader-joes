@@ -29,6 +29,13 @@
       "when": 1793358496818,
       "tag": "0003_ai_screenings",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793415864734,
+      "tag": "0004_screening_failure_reason",
+      "breakpoints": true
     }
   ]
 }

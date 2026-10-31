@@ -1,8 +1,6 @@
 @if (file(); as chosen) {
   <div class="chosen">
-    <span class="chosen__icon" aria-hidden="true">
-      {{ chosen.name.toLowerCase().endsWith('.pdf') ? 'PDF' : 'DOC' }}
-    </span>
+    <span class="chosen__icon" aria-hidden="true">PDF</span>
     <span class="chosen__text">
       <span class="chosen__name">{{ chosen.name }}</span>
       <span class="chosen__size">{{ formatSize(chosen.size) }}</span>
@@ -42,7 +40,7 @@
   <span class="drop__title"
     ><span class="drop__link">Choose a file</span> or drag it here</span
   >
-  <span class="drop__hint">PDF or Word (.docx), up to 5 MB</span>
+  <span class="drop__hint">PDF only, up to 5 MB</span>
   <input
     #picker
     class="drop__input"
