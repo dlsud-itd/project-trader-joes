@@ -1,0 +1,143 @@
+<header class="head">
+  <div>
+    <h1>Applications</h1>
+    <p>Applicants across your postings, ranked by AI fit score.</p>
+  </div>
+</header>
+
+<p class="tf-alert tf-alert--info sample" role="note">
+  Showing sample applicants. This list will load from the API once the
+  applications endpoint is ready.
+</p>
+
+<div class="toolbar">
+  <label class="search">
+    <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true">
+      <circle
+        cx="9"
+        cy="9"
+        r="5.5"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.6"
+      />
+      <path
+        d="M13 13l3.5 3.5"
+        stroke="currentColor"
+        stroke-width="1.6"
+        stroke-linecap="round"
+      />
+    </svg>
+    <input
+      type="search"
+      placeholder="Search by name or email"
+      aria-label="Search applicants"
+      [value]="query()"
+      (input)="query.set($any($event.target).value)"
+    />
+  </label>
+
+  <label class="select">
+    <span>Posting</span>
+    <select
+      [value]="posting()"
+      (change)="posting.set($any($event.target).value)"
+    >
+      <option value="all">All postings</option>
+      @for (p of postings(); track p) {
+        <option [value]="p">{{ p }}</option>
+      }
+    </select>
+  </label>
+
+  <label class="select">
+    <span>Sort</span>
+    <select [value]="sort()" (change)="sort.set($any($event.target).value)">
+      <option value="fit">Fit score: high to low</option>
+      <option value="newest">Newest first</option>
+    </select>
+  </label>
+</div>
+
+<div class="chips" role="group" aria-label="Filter by fit">
+  @for (f of filters(); track f.id) {
+    <button
+      type="button"
+      class="chip"
+      [class]="'chip--' + f.id"
+      [class.is-active]="filter() === f.id"
+      [attr.aria-pressed]="filter() === f.id"
+      (click)="filter.set(f.id)"
+    >
+      {{ f.label }} <span class="chip__count">{{ f.count }}</span>
+    </button>
+  }
+</div>
+
+<div class="layout">
+  <section class="list" aria-label="Applicants">
+    <div class="list__head" aria-hidden="true">
+      <span>Applicant</span>
+      <span>AI fit</span>
+      <span>Stage</span>
+      <span>Applied</span>
+    </div>
+
+    @for (row of visible(); track row.id) {
+      <div class="row" [class.is-selected]="row.id === selectedId()">
+        <span class="who">
+          <span class="avatar" aria-hidden="true">{{
+            initials(row.full_name)
+          }}</span>
+          <span class="who__text">
+            <!-- Covers the whole row, so clicking anywhere selects it -->
+            <button
+              type="button"
+              class="who__name"
+              [attr.aria-current]="row.id === selectedId() ? 'true' : null"
+              (click)="select(row)"
+            >
+              {{ row.full_name }}
+            </button>
+            <span class="who__sub">{{ row.posting_title }}</span>
+          </span>
+        </span>
+        <span class="row__fit">
+          <app-fit-score-badge
+            [score]="row.screening?.fit_score"
+            [status]="row.screening?.status"
+            [busy]="isScoring(row.id)"
+            (retry)="score(row)"
+          />
+        </span>
+        <span class="row__stage">
+          <span class="tf-stage" [class]="'tf-stage--' + row.kanban_stage">{{
+            row.kanban_stage
+          }}</span>
+        </span>
+        <span class="row__date">{{ row.submitted_at | date: 'MMM d' }}</span>
+      </div>
+    } @empty {
+      <div class="empty">
+        <span>No applicants match these filters.</span>
+        <button
+          class="tf-btn tf-btn--ghost tf-btn--sm"
+          type="button"
+          (click)="query.set(''); posting.set('all'); filter.set('all')"
+        >
+          Clear filters
+        </button>
+      </div>
+    }
+  </section>
+
+  <aside class="detail" #detail aria-label="Selected applicant">
+    @if (selected(); as a) {
+      <app-applicant-detail
+        [application]="a"
+        [busy]="isScoring(a.id)"
+        (score)="score(a)"
+      />
+    }
+  </aside>
+</div>

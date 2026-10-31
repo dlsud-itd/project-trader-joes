@@ -71,6 +71,14 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'applications',
+        title: 'Applications · TalentFlow',
+        loadComponent: () =>
+          import('./pages/applications/applications').then(
+            (m) => m.Applications,
+          ),
+      },
+      {
         path: 'team',
         title: 'Team accounts · TalentFlow',
         canActivate: [roleGuard('manager')],

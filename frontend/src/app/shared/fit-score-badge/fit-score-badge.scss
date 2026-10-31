@@ -192,8 +192,9 @@
 
 .failed {
   display: inline-flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: 6px 8px;
 
   &__chip {
     display: inline-flex;
