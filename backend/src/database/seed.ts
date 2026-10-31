@@ -2,11 +2,13 @@ import bcrypt from 'bcryptjs';
 import { count } from 'drizzle-orm';
 import { pathToFileURL } from 'node:url';
 import type { Database } from './database.module.js';
+import { SALT_ROUNDS } from '../users/users.constants.js';
 import { users } from './schema.js';
 
 /**
- * Inserts the sample accounts listed in the root README when the database is empty.
- * Safe to run more than once: it does nothing if any user already exists.
+ * Inserts the sample accounts listed in the root README when the database is
+ * empty. Safe to run more than once: it does nothing if any user already
+ * exists.
  */
 export async function seedDatabase(db: Database): Promise<boolean> {
   const [{ total }] = await db.select({ total: count() }).from(users);
@@ -15,14 +17,14 @@ export async function seedDatabase(db: Database): Promise<boolean> {
   await db.insert(users).values([
     {
       email: 'manager@talentflow.dev',
-      password_hash: await bcrypt.hash('Manager123!', 10),
+      password_hash: await bcrypt.hash('Manager123!', SALT_ROUNDS),
       first_name: 'Maria',
       last_name: 'Santos',
       role: 'manager',
     },
     {
       email: 'recruiter@talentflow.dev',
-      password_hash: await bcrypt.hash('Recruiter123!', 10),
+      password_hash: await bcrypt.hash('Recruiter123!', SALT_ROUNDS),
       first_name: 'Juan',
       last_name: 'Reyes',
       role: 'recruiter',
@@ -32,7 +34,9 @@ export async function seedDatabase(db: Database): Promise<boolean> {
 }
 
 /* Allows `npm run db:seed` to run this file directly. */
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+const isRunDirectly =
+  !!process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (isRunDirectly) {
   const { config } = await import('dotenv');
   config();
   const { createPool } = await import('./database.module.js');

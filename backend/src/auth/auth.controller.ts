@@ -1,4 +1,11 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Post,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../common/decorators/current-user.decorator.js';
 import { Public } from '../common/decorators/public.decorator.js';
@@ -25,7 +32,10 @@ export class AuthController {
     return this.auth.login(dto);
   }
 
-  /** POST /api/auth/register — API spec I.B. Only managers create staff accounts. */
+  /**
+   * POST /api/auth/register — API spec I.B. Only managers create staff
+   * accounts.
+   */
   @ApiBearerAuth()
   @Roles('manager')
   @Post('register')
@@ -34,7 +44,10 @@ export class AuthController {
     return { message: 'User registered successfully.', user };
   }
 
-  /** GET /api/auth/me — returns the signed-in user. Used by the frontend on page load. */
+  /**
+   * GET /api/auth/me — returns the signed-in user. Used by the frontend on
+   * page load.
+   */
   @ApiBearerAuth()
   @Get('me')
   me(@CurrentUser() user: AuthUser) {

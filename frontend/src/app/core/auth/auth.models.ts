@@ -1,42 +1,47 @@
-
 /** Staff roles from the user stories: Recruitment Manager and Recruiter. */
-export type UserRole = 'manager' | 'recruiter';
+export enum UserRole {
+  MANAGER = 'manager',
+  RECRUITER = 'recruiter',
+}
 
 export const ROLE_LABELS: Record<UserRole, string> = {
-  manager: 'Recruitment Manager',
-  recruiter: 'Recruiter',
+  [UserRole.MANAGER]: 'Recruitment Manager',
+  [UserRole.RECRUITER]: 'Recruiter',
 };
 
-export interface User {
+/** Why the user was signed out; sent to the login page as `?reason=`. */
+export enum LogoutReason {
+  EXPIRED = 'expired',
+}
+
+export type User = {
   id: number;
   email: string;
   first_name: string;
   last_name: string;
   role: UserRole;
   created_at: string;
-}
+};
 
-export interface LoginRequest {
+export type LoginRequest = {
   email: string;
   password: string;
-}
+};
 
-export interface LoginResponse {
+export type LoginResponse = {
   token: string;
   user: User;
-}
+};
 
-export interface RegisterRequest {
+export type RegisterRequest = {
   email: string;
   password: string;
   first_name: string;
   last_name: string;
   role: UserRole;
-}
+};
 
-export interface RegisterResponse {
+export type RegisterResponse = {
   message: string;
   user: User;
-}
-
-
+};

@@ -39,16 +39,26 @@ describe('JwtAuthGuard', () => {
     markPublic(false);
     const { context } = contextFor();
 
-    await expect(guard.canActivate(context)).rejects.toThrow(UnauthorizedException);
+    await expect(guard.canActivate(context)).rejects.toThrow(
+      UnauthorizedException,
+    );
   });
 
   it('accepts a valid token and attaches the user', async () => {
     markPublic(false);
-    const token = await jwt.signAsync({ sub: 5, email: 'a@b.com', role: 'recruiter' });
+    const token = await jwt.signAsync({
+      sub: 5,
+      email: 'a@b.com',
+      role: 'recruiter',
+    });
     const { context, request } = contextFor(`Bearer ${token}`);
 
     await expect(guard.canActivate(context)).resolves.toBe(true);
-    expect(request.user).toEqual({ id: 5, email: 'a@b.com', role: 'recruiter' });
+    expect(request.user).toEqual({
+      id: 5,
+      email: 'a@b.com',
+      role: 'recruiter',
+    });
   });
 
   it('rejects a fake token', async () => {
@@ -60,8 +70,9 @@ describe('JwtAuthGuard', () => {
     });
     const { context, request } = contextFor(`Bearer ${forged}`);
 
-    await expect(guard.canActivate(context)).rejects.toThrow(UnauthorizedException);
+    await expect(guard.canActivate(context)).rejects.toThrow(
+      UnauthorizedException,
+    );
     expect(request.user).toBeUndefined();
   });
 });
-

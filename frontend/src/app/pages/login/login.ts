@@ -1,9 +1,20 @@
 import { Component, inject, input, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { finalize, from, switchMap } from 'rxjs';
 import { apiErrorMessage } from '../../core/api/api-error';
+import { AppPath } from '../../core/app-paths';
+import { LogoutReason } from '../../core/auth/auth.models';
 import { AuthService } from '../../core/auth/auth.service';
 
+type LoginField = 'email' | 'password';
+
+type PipelineStage = {
+  name: string;
+  count: number;
+};
+
+const SIGN_IN_FAILED_MESSAGE = 'Sign-in failed. Try again.';
 
 @Component({
   selector: 'app-login',
@@ -19,12 +30,14 @@ export class Login {
   readonly reason = input<string>();
   readonly returnUrl = input<string>();
 
-  readonly submitting = signal(false);
-  readonly error = signal<string | null>(null);
-  readonly showPassword = signal(false);
+  protected readonly LogoutReason = LogoutReason;
 
-  /** Example pipeline shown on the brand panel (illustrative, not live data). */
-  readonly stages = [
+  readonly isSubmitting = signal(false);
+  readonly errorMessage = signal<string | null>(null);
+  readonly isPasswordVisible = signal(false);
+
+  /** Example pipeline shown on the brand panel (illustrative, not live). */
+  readonly stages: PipelineStage[] = [
     { name: 'Applied', count: 42 },
     { name: 'Screening', count: 18 },
     { name: 'Interview', count: 7 },
@@ -32,29 +45,35 @@ export class Login {
   ];
 
   readonly form = inject(FormBuilder).nonNullable.group({
-    email: ['', [Validators.required, Validators.email]],
-    password: ['', Validators.required],
+    email: ['', { validators: [Validators.required, Validators.email] }],
+    password: ['', { validators: [Validators.required] }],
   });
 
-  showError(field: 'email' | 'password'): boolean {
+  shouldShowError(field: LoginField): boolean {
     const control = this.form.controls[field];
     return control.invalid && (control.touched || control.dirty);
   }
 
-  async submit(): Promise<void> {
+  submit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
     }
-    this.submitting.set(true);
-    this.error.set(null);
-    try {
-      await this.auth.login(this.form.getRawValue());
-      await this.router.navigateByUrl(this.returnUrl() || '/dashboard');
-    } catch (err) {
-      this.error.set(apiErrorMessage(err, 'Sign-in failed. Try again.'));
-    } finally {
-      this.submitting.set(false);
-    }
+    this.isSubmitting.set(true);
+    this.errorMessage.set(null);
+    this.auth
+      .login(this.form.getRawValue())
+      .pipe(
+        switchMap(() =>
+          from(
+            this.router.navigateByUrl(this.returnUrl() || AppPath.DASHBOARD),
+          ),
+        ),
+        finalize(() => this.isSubmitting.set(false)),
+      )
+      .subscribe({
+        error: (err: unknown) =>
+          this.errorMessage.set(apiErrorMessage(err, SIGN_IN_FAILED_MESSAGE)),
+      });
   }
 }

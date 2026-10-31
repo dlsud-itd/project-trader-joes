@@ -3,5 +3,8 @@ import type { UserRole } from '../../database/schema.js';
 
 export const ROLES_KEY = 'roles';
 
-/** Restricts a route to the listed roles. Routes without it allow any signed-in user. */
+/**
+ * Restricts a route to the listed roles. Routes without it allow any
+ * signed-in user.
+ */
 export const Roles = (...roles: UserRole[]) => SetMetadata(ROLES_KEY, roles);

@@ -1,4 +1,11 @@
-import { IsEmail, IsIn, IsString, Matches, MaxLength, MinLength } from 'class-validator';
+import {
+  IsEmail,
+  IsIn,
+  IsString,
+  Matches,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 import { userRoleEnum, type UserRole } from '../../database/schema.js';
 
 export class RegisterDto {

@@ -60,7 +60,10 @@ describe('AuthService', () => {
 
   it('rejects an unknown email with the same message', async () => {
     await expect(
-      service.login({ email: 'nobody@talentflow.dev', password: 'Manager123!' }),
+      service.login({
+        email: 'nobody@talentflow.dev',
+        password: 'Manager123!',
+      }),
     ).rejects.toThrow('Invalid email or password');
   });
 });

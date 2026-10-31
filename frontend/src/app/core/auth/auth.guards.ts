@@ -1,33 +1,59 @@
 import { inject } from '@angular/core';
-import { CanActivateFn, Router } from '@angular/router';
+import {
+  ActivatedRouteSnapshot,
+  CanActivateFn,
+  Router,
+  RouterStateSnapshot,
+  UrlTree,
+} from '@angular/router';
+import { map, Observable } from 'rxjs';
+import { ACCESS_DENIED_FLAG, AppPath } from '../app-paths';
 import { UserRole } from './auth.models';
 import { AuthService } from './auth.service';
 
 /** Lets signed-in users through; sends everyone else to the login page. */
-export const authGuard: CanActivateFn = async (_route, state) => {
+export const authGuard: CanActivateFn = (
+  _route: ActivatedRouteSnapshot,
+  state: RouterStateSnapshot,
+): Observable<boolean | UrlTree> => {
   const auth = inject(AuthService);
   const router = inject(Router);
-  if (await auth.restoreSession()) return true;
-  return router.createUrlTree(['/login'], { queryParams: { returnUrl: state.url } });
+  return auth.restoreSession().pipe(
+    map(
+      (isSignedIn: boolean) =>
+        isSignedIn ||
+        router.createUrlTree([AppPath.LOGIN], {
+          queryParams: { returnUrl: state.url },
+        }),
+    ),
+  );
 };
 
 /** Keeps signed-in users away from the login page. */
-export const guestGuard: CanActivateFn = async () => {
+export const guestGuard: CanActivateFn = (): Observable<boolean | UrlTree> => {
   const auth = inject(AuthService);
   const router = inject(Router);
-  return (await auth.restoreSession()) ? router.createUrlTree(['/dashboard']) : true;
+  return auth
+    .restoreSession()
+    .pipe(
+      map((isSignedIn: boolean) =>
+        isSignedIn ? router.createUrlTree([AppPath.DASHBOARD]) : true,
+      ),
+    );
 };
 
 /**
  * Restricts a route to the given roles. Use after authGuard:
- *   canActivate: [authGuard, roleGuard('manager')]
+ *   canActivate: [authGuard, roleGuard(UserRole.MANAGER)]
  */
 export function roleGuard(...roles: UserRole[]): CanActivateFn {
-  return () => {
+  return (): boolean | UrlTree => {
     const auth = inject(AuthService);
     const router = inject(Router);
     return auth.hasRole(...roles)
       ? true
-      : router.createUrlTree(['/dashboard'], { queryParams: { denied: 1 } });
+      : router.createUrlTree([AppPath.DASHBOARD], {
+          queryParams: { denied: ACCESS_DENIED_FLAG },
+        });
   };
 }

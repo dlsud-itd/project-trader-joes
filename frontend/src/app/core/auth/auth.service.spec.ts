@@ -6,7 +6,7 @@ import {
 } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
 import { environment } from '../../../environments/environment';
-import { User } from './auth.models';
+import { User, UserRole } from './auth.models';
 import { AuthService } from './auth.service';
 
 const LOGIN_URL = `${environment.apiUrl}/auth/login`;
@@ -22,8 +22,8 @@ const manager: User = {
   email: 'manager@talentflow.dev',
   first_name: 'Maria',
   last_name: 'Santos',
-  role: 'manager',
-  created_at: '2026-10-16T00:00:00Z'
+  role: UserRole.MANAGER,
+  created_at: '2026-10-16T00:00:00Z',
 };
 
 describe('AuthService', () => {
@@ -43,29 +43,25 @@ describe('AuthService', () => {
     http = TestBed.inject(HttpTestingController);
   });
 
-  async function signIn(): Promise<void> {
-    const signingIn = auth.login({
-      email: manager.email,
-      password: VALID_PASSWORD,
-    });
+  function signIn(): void {
+    auth.login({ email: manager.email, password: VALID_PASSWORD }).subscribe();
     http.expectOne(LOGIN_URL).flush({ token: FAKE_TOKEN, user: manager });
-    await signingIn;
   }
 
-  it('saves the token after login', async () => {
-    await signIn();
+  it('saves the token after login', () => {
+    signIn();
 
     expect(auth.token()).toBe(FAKE_TOKEN);
   });
 
-  it('keeps the token in localStorage after login', async () => {
-    await signIn();
+  it('keeps the token in localStorage after login', () => {
+    signIn();
 
     expect(localStorage.getItem(TOKEN_KEY)).toBe(FAKE_TOKEN);
   });
 
-  it('clears the token on logout', async () => {
-    await signIn();
+  it('clears the token on logout', () => {
+    signIn();
 
     auth.logout();
 
@@ -73,13 +69,11 @@ describe('AuthService', () => {
     expect(localStorage.getItem(TOKEN_KEY)).toBeNull();
   });
 
-  it('does not save a token when login fails', async () => {
-    const signingIn = auth.login({
-      email: manager.email,
-      password: WRONG_PASSWORD,
-    });
+  it('does not save a token when login fails', () => {
+    auth
+      .login({ email: manager.email, password: WRONG_PASSWORD })
+      .subscribe({ error: () => undefined });
     http.expectOne(LOGIN_URL).flush(LOGIN_ERROR, UNAUTHORIZED);
-    await signingIn.catch(() => undefined);
 
     expect(auth.token()).toBeFalsy();
     expect(localStorage.getItem(TOKEN_KEY)).toBeNull();

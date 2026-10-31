@@ -1,11 +1,13 @@
 import { HttpClient } from '@angular/common/http';
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { firstValueFrom } from 'rxjs';
+import { catchError, map, Observable, of, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { AppPath } from '../app-paths';
 import {
   LoginRequest,
   LoginResponse,
+  LogoutReason,
   RegisterRequest,
   RegisterResponse,
   User,
@@ -30,8 +32,8 @@ export class AuthService {
   readonly user = this._user.asReadonly();
   readonly isAuthenticated = computed(() => this._user() !== null);
   readonly fullName = computed(() => {
-    const u = this._user();
-    return u ? `${u.first_name} ${u.last_name}` : '';
+    const user = this._user();
+    return user ? `${user.first_name} ${user.last_name}` : '';
   });
 
   token(): string | null {
@@ -43,37 +45,46 @@ export class AuthService {
     return !!user && roles.includes(user.role);
   }
 
-  async login(credentials: LoginRequest): Promise<User> {
-    const res = await firstValueFrom(this.http.post<LoginResponse>(`${this.api}/login`, credentials));
-    this.setToken(res.token);
-    this._user.set(res.user);
-    return res.user;
+  /** Signs in and keeps the token. Emits the signed-in user. */
+  login(credentials: LoginRequest): Observable<User> {
+    return this.http.post<LoginResponse>(`${this.api}/login`, credentials).pipe(
+      tap((res: LoginResponse) => {
+        this.setToken(res.token);
+        this._user.set(res.user);
+      }),
+      map((res: LoginResponse) => res.user),
+    );
   }
 
-  register(body: RegisterRequest): Promise<RegisterResponse> {
-    return firstValueFrom(this.http.post<RegisterResponse>(`${this.api}/register`, body));
+  register(body: RegisterRequest): Observable<RegisterResponse> {
+    return this.http.post<RegisterResponse>(`${this.api}/register`, body);
   }
 
   /**
-   * Restores the session after a page refresh by asking the API who the token belongs to.
-   * Returns false if there is no token or it is no longer valid.
+   * Restores the session after a page refresh by asking the API who the
+   * token belongs to. Emits false if there is no token or it is no longer
+   * valid.
    */
-  async restoreSession(): Promise<boolean> {
-    if (this._user()) return true;
-    if (!this._token()) return false;
-    try {
-      this._user.set(await firstValueFrom(this.http.get<User>(`${this.api}/me`)));
-      return true;
-    } catch {
-      this.clear();
-      return false;
-    }
+  restoreSession(): Observable<boolean> {
+    if (this._user()) return of(true);
+    if (!this._token()) return of(false);
+    return this.http.get<User>(`${this.api}/me`).pipe(
+      tap((user: User) => this._user.set(user)),
+      map(() => true),
+      catchError(() => {
+        this.clear();
+        return of(false);
+      }),
+    );
   }
 
   /** Tokens are stateless, so signing out only clears them on this device. */
-  logout(reason?: 'expired'): void {
+  logout(reason?: LogoutReason): void {
     this.clear();
-    void this.router.navigate(['/login'], reason ? { queryParams: { reason } } : {});
+    void this.router.navigate(
+      [AppPath.LOGIN],
+      reason ? { queryParams: { reason } } : {},
+    );
   }
 
   private setToken(token: string): void {
@@ -81,7 +92,8 @@ export class AuthService {
     try {
       localStorage.setItem(TOKEN_KEY, token);
     } catch {
-      /* Storage can be blocked (private mode); the session then lasts until refresh. */
+      // Storage can be blocked (private mode); the session then lasts
+      // until refresh.
     }
   }
 
@@ -91,7 +103,7 @@ export class AuthService {
     try {
       localStorage.removeItem(TOKEN_KEY);
     } catch {
-      /* ignore */
+      // Storage can be blocked; nothing to remove then.
     }
   }
 }
