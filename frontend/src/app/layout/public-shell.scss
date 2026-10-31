@@ -40,6 +40,12 @@
   }
 }
 
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
 .staff {
   color: var(--tf-ink-soft);
   font-size: 14px;
@@ -48,6 +54,27 @@
 
   &:hover {
     color: var(--tf-accent);
+  }
+}
+
+.account {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--tf-ink-soft);
+  font-size: 14px;
+  font-weight: 500;
+
+  &__avatar {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: var(--tf-accent-soft);
+    color: var(--tf-accent-strong);
+    font-size: 13px;
+    font-weight: 600;
   }
 }
 
@@ -74,6 +101,15 @@
 @media (max-width: 760px) {
   .bar__inner {
     padding: 0 16px;
+  }
+
+  .actions {
+    gap: 8px;
+  }
+
+  .staff,
+  .account {
+    display: none;
   }
 
   .content {

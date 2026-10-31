@@ -1,6 +1,9 @@
 import { IsEmail, IsIn, IsString, Matches, MaxLength, MinLength } from 'class-validator';
-import { userRoleEnum, type UserRole } from '../../database/schema.js';
+import { STAFF_ROLES } from '../../database/schema.js';
 
+type StaffRole = (typeof STAFF_ROLES)[number];
+
+/** Creates a manager or recruiter account. Applicants use RegisterApplicantDto instead. */
 export class RegisterDto {
   @IsEmail({}, { message: 'Enter a valid email address.' })
   email: string;
@@ -22,8 +25,8 @@ export class RegisterDto {
   @MaxLength(100)
   last_name: string;
 
-  @IsIn(userRoleEnum.enumValues, {
-    message: `Role must be one of: ${userRoleEnum.enumValues.join(', ')}.`,
+  @IsIn(STAFF_ROLES, {
+    message: `Role must be one of: ${STAFF_ROLES.join(', ')}.`,
   })
-  role: UserRole;
+  role: StaffRole;
 }

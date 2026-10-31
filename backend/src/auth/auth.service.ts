@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import type { JwtPayload } from '../common/types/auth-user.js';
 import { UsersService, type PublicUser } from '../users/users.service.js';
 import type { LoginDto } from './dto/login.dto.js';
+import type { RegisterApplicantDto } from './dto/register-applicant.dto.js';
 import type { RegisterDto } from './dto/register.dto.js';
 
 export interface LoginResult {
@@ -41,5 +42,10 @@ export class AuthService {
 
   register(dto: RegisterDto): Promise<PublicUser> {
     return this.users.create(dto);
+  }
+
+  /** Public self-registration. The role is always 'applicant', never taken from the request. */
+  registerApplicant(dto: RegisterApplicantDto): Promise<PublicUser> {
+    return this.users.create({ ...dto, role: 'applicant' });
   }
 }

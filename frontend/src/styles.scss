@@ -217,6 +217,51 @@ textarea {
   }
 }
 
+/* Pipeline stage: Applied / Screening / Interview / Offer / Rejected */
+.tf-stage {
+  --c: var(--tf-accent-strong);
+  --c-soft: var(--tf-accent-soft);
+
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--c-soft);
+  color: var(--c);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+
+  &::before {
+    content: '';
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  &--Screening {
+    --c: #0e7490;
+    --c-soft: #e0f4f8;
+  }
+
+  &--Interview {
+    --c: var(--tf-amber);
+    --c-soft: var(--tf-amber-soft);
+  }
+
+  &--Offer {
+    --c: var(--tf-success);
+    --c-soft: var(--tf-success-soft);
+  }
+
+  &--Rejected {
+    --c: var(--tf-muted);
+    --c-soft: var(--tf-bg);
+  }
+}
+
 /*
  * On/off switch. Markup:
  * <button role="switch" class="tf-switch" [attr.aria-checked]="on">

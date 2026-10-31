@@ -1,23 +1,43 @@
 :host {
+  --side-w: 248px;
+  --side-bg: linear-gradient(180deg, #4a1fd1 0%, #3a14a8 100%);
+
   display: block;
   min-height: 100vh;
 }
 
-.bar {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  background: var(--tf-surface);
-  border-bottom: 1px solid var(--tf-line);
+/* ------------------------------------------------------------ sidebar */
 
-  &__inner {
+.side {
+  position: fixed;
+  inset: 12px auto 12px 12px;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  width: var(--side-w);
+  padding: 20px 14px 14px;
+  border-radius: var(--tf-radius-lg);
+  background: var(--side-bg);
+  color: #fff;
+  box-shadow: 0 8px 28px rgb(58 20 168 / 22%);
+  overflow-y: auto;
+
+  &__top {
     display: flex;
     align-items: center;
-    gap: 32px;
-    max-width: 1200px;
-    height: 64px;
-    margin: 0 auto;
-    padding: 0 24px;
+    justify-content: space-between;
+    padding: 0 8px 22px;
+  }
+
+  &__close {
+    display: none;
+  }
+
+  &__bottom {
+    display: grid;
+    gap: 6px;
+    margin-top: auto;
+    padding-top: 16px;
   }
 }
 
@@ -25,119 +45,224 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  color: var(--tf-ink);
-  text-decoration: none;
+  color: #fff;
   font-family: var(--tf-font-display);
+  font-size: 18px;
   font-weight: 700;
-  font-size: 17px;
-
-  &__mark {
-    display: grid;
-    place-items: center;
-    width: 30px;
-    height: 30px;
-    border-radius: 8px;
-    background: var(--tf-ink);
-    color: #fff;
-    font-size: 12px;
-  }
+  text-decoration: none;
 }
 
 .nav {
-  display: flex;
-  gap: 4px;
-  flex: 1;
+  display: grid;
+  gap: 2px;
+
+  &__label {
+    margin: 14px 12px 6px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgb(255 255 255 / 55%);
+
+    &:first-child {
+      margin-top: 0;
+    }
+  }
 
   a {
-    padding: 8px 12px;
-    border-radius: var(--tf-radius-sm);
-    color: var(--tf-ink-soft);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    height: 42px;
+    padding: 0 12px;
+    border-radius: 10px;
+    color: rgb(255 255 255 / 82%);
+    font-size: 14.5px;
     font-weight: 500;
     text-decoration: none;
-    white-space: nowrap;
+    transition:
+      background 0.15s,
+      color 0.15s;
 
     &:hover {
-      background: var(--tf-bg);
-      color: var(--tf-ink);
+      background: rgb(255 255 255 / 10%);
+      color: #fff;
     }
 
     &.is-active {
-      background: var(--tf-accent-soft);
+      background: #fff;
       color: var(--tf-accent-strong);
+      font-weight: 600;
+      box-shadow: 0 2px 8px rgb(26 21 48 / 18%);
     }
   }
+}
+
+.nav a svg,
+.logout svg {
+  flex: none;
+  width: 19px;
+  height: 19px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .account {
   display: flex;
   align-items: center;
   gap: 10px;
+  padding: 10px;
+  border-radius: 12px;
+  background: rgb(255 255 255 / 10%);
 
   &__avatar {
     display: grid;
     place-items: center;
+    flex: none;
     width: 34px;
     height: 34px;
     border-radius: 50%;
-    background: var(--tf-accent-soft);
+    background: #fff;
     color: var(--tf-accent-strong);
     font-size: 13px;
-    font-weight: 600;
+    font-weight: 700;
   }
 
   &__text {
     display: grid;
+    min-width: 0;
     line-height: 1.25;
   }
 
   &__name {
+    overflow: hidden;
+    font-size: 13.5px;
     font-weight: 600;
-    font-size: 14px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   &__role {
-    font-size: 12.5px;
-    color: var(--tf-muted);
-  }
-
-  &__logout {
-    height: 36px;
-    margin-left: 6px;
-    font-size: 14px;
+    font-size: 12px;
+    color: rgb(255 255 255 / 65%);
   }
 }
+
+.logout {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 40px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: rgb(255 255 255 / 82%);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+
+  &:hover {
+    background: rgb(255 255 255 / 10%);
+    color: #fff;
+  }
+}
+
+.side :focus-visible {
+  box-shadow: 0 0 0 3px rgb(255 255 255 / 45%);
+}
+
+/* ------------------------------------------------------------ content */
 
 .content {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 32px 24px 64px;
+  max-width: 1280px;
+  margin-left: calc(var(--side-w) + 12px);
+  padding: 32px 32px 64px;
 }
 
-@media (max-width: 760px) {
-  .bar__inner {
-    flex-wrap: wrap;
-    gap: 0 12px;
-    height: auto;
-    padding: 10px 16px 0;
-  }
+/* ------------------------------------------------------------ small screens */
 
-  .account {
-    margin-left: auto;
+.topbar,
+.scrim {
+  display: none;
+}
 
-    &__text {
-      display: none;
+@media (max-width: 960px) {
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 56px;
+    padding: 0 12px;
+    border-bottom: 1px solid var(--tf-line);
+    background: var(--tf-surface);
+
+    &__menu {
+      display: grid;
+      place-items: center;
+      width: 40px;
+      height: 40px;
+      border: 0;
+      border-radius: var(--tf-radius-sm);
+      background: transparent;
+      color: var(--tf-ink);
+      cursor: pointer;
+
+      &:hover {
+        background: var(--tf-bg);
+      }
+    }
+
+    &__logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--tf-ink);
+      font-family: var(--tf-font-display);
+      font-weight: 700;
+      text-decoration: none;
     }
   }
 
-  .nav {
-    order: 3;
-    flex-basis: 100%;
-    margin: 8px -4px 0;
-    padding-bottom: 8px;
-    overflow-x: auto;
+  .side {
+    inset: 0 auto 0 0;
+    border-radius: 0 var(--tf-radius-lg) var(--tf-radius-lg) 0;
+    transform: translateX(-105%);
+    transition: transform 0.25s cubic-bezier(0.2, 0.7, 0.2, 1);
+
+    &.is-open {
+      transform: none;
+    }
+
+    &__close {
+      display: grid;
+      place-items: center;
+      width: 34px;
+      height: 34px;
+      border: 0;
+      border-radius: 8px;
+      background: rgb(255 255 255 / 12%);
+      color: #fff;
+      cursor: pointer;
+    }
+  }
+
+  .scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 25;
+    display: block;
+    background: rgb(26 21 48 / 40%);
   }
 
   .content {
+    margin-left: 0;
     padding: 24px 16px 48px;
   }
 }
