@@ -3,6 +3,8 @@ import {
   DEFAULT_GEMINI_MODEL,
   GeminiClient,
   GeminiError,
+  GeminiFailure,
+  RETRY_DELAYS_MS,
 } from './gemini.client.js';
 
 const request = {
@@ -73,26 +75,11 @@ describe('GeminiClient', () => {
   });
 
   it('fails without calling Gemini when there is no API key', async () => {
-    await expect(clientWith({}).generateJson(request)).rejects.toThrow(
-      'GEMINI_API_KEY is not set.',
-    );
+    await expect(clientWith({}).generateJson(request)).rejects.toMatchObject({
+      message: 'GEMINI_API_KEY is not set.',
+      failure: GeminiFailure.NOT_CONFIGURED,
+    });
     expect(fetchMock).not.toHaveBeenCalled();
-  });
-
-  it('turns an error status into a GeminiError', async () => {
-    fetchMock.mockResolvedValue(
-      geminiReply({ error: { message: 'Quota exceeded' } }, 429),
-    );
-    await expect(
-      clientWith({ GEMINI_API_KEY: 'test-key' }).generateJson(request),
-    ).rejects.toThrow(/Gemini returned 429: .*Quota exceeded/);
-  });
-
-  it('turns a network failure into a GeminiError', async () => {
-    fetchMock.mockRejectedValue(new TypeError('fetch failed'));
-    await expect(
-      clientWith({ GEMINI_API_KEY: 'test-key' }).generateJson(request),
-    ).rejects.toBeInstanceOf(GeminiError);
   });
 
   it('fails when Gemini gives no answer, e.g. a blocked prompt', async () => {
@@ -101,6 +88,99 @@ describe('GeminiClient', () => {
     );
     await expect(
       clientWith({ GEMINI_API_KEY: 'test-key' }).generateJson(request),
-    ).rejects.toThrow('Gemini returned no answer (SAFETY).');
+    ).rejects.toMatchObject({
+      message: 'Gemini returned no answer (SAFETY).',
+      failure: GeminiFailure.NO_ANSWER,
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  describe('when Gemini is busy', () => {
+    const answer = () =>
+      geminiReply({ candidates: [{ content: { parts: [{ text: '{}' }] } }] });
+
+    /** Calls Gemini and skips the waits between retries. */
+    const generate = async () => {
+      const result = clientWith({ GEMINI_API_KEY: 'test-key' })
+        .generateJson(request)
+        .then(
+          (text) => ({ text }),
+          (error: unknown) => ({ error }),
+        );
+      await vi.runAllTimersAsync();
+      return result;
+    };
+
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ['setTimeout'] });
+    });
+
+    afterEach(() => vi.useRealTimers());
+
+    it.each([429, 500, 503])(
+      'tries again after a %i and returns the answer',
+      async (status) => {
+        fetchMock
+          .mockResolvedValueOnce(
+            geminiReply({ error: { message: 'Try later' } }, status),
+          )
+          .mockResolvedValueOnce(answer());
+
+        await expect(generate()).resolves.toEqual({ text: '{}' });
+        expect(fetchMock).toHaveBeenCalledTimes(2);
+      },
+    );
+
+    it('tries again after a network failure or timeout', async () => {
+      fetchMock
+        .mockRejectedValueOnce(new DOMException('timed out', 'TimeoutError'))
+        .mockResolvedValueOnce(answer());
+
+      await expect(generate()).resolves.toEqual({ text: '{}' });
+    });
+
+    it('gives up as BUSY after the last retry', async () => {
+      fetchMock.mockImplementation(async () =>
+        geminiReply({ error: { message: 'High demand' } }, 503),
+      );
+
+      const { error } = (await generate()) as { error: GeminiError };
+
+      expect(error).toBeInstanceOf(GeminiError);
+      expect(error.failure).toBe(GeminiFailure.BUSY);
+      expect(error.message).toMatch(/Gemini returned 503: .*High demand/);
+      expect(fetchMock).toHaveBeenCalledTimes(RETRY_DELAYS_MS.length + 1);
+    });
+
+    it('does not retry once the daily quota is used up', async () => {
+      fetchMock.mockResolvedValue(
+        geminiReply(
+          {
+            error: {
+              message:
+                'Quota exceeded. quotaId: ' +
+                'GenerateRequestsPerDayPerProjectPerModel-FreeTier',
+            },
+          },
+          429,
+        ),
+      );
+
+      const { error } = (await generate()) as { error: GeminiError };
+
+      expect(error.failure).toBe(GeminiFailure.DAILY_LIMIT);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not retry a request Gemini refuses, e.g. a bad key', async () => {
+      fetchMock.mockResolvedValue(
+        geminiReply({ error: { message: 'API key not valid' } }, 400),
+      );
+
+      const { error } = (await generate()) as { error: GeminiError };
+
+      expect(error.failure).toBe(GeminiFailure.REJECTED);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
   });
 });
