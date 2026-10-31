@@ -23,7 +23,17 @@ import {
  * Column names are snake_case so API responses match the API specification.
  */
 
-export const userRoleEnum = pgEnum('user_role', ['manager', 'recruiter']);
+export const userRoleEnum = pgEnum('user_role', [
+  'manager',
+  'recruiter',
+  'applicant',
+]);
+
+/**
+ * Roles created through POST /api/auth/register (manager-only). Applicants
+ * self-register instead.
+ */
+export const STAFF_ROLES = ['manager', 'recruiter'] as const;
 
 export const users = pgTable('users', {
   id: serial('id').primaryKey(),

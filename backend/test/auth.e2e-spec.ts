@@ -20,6 +20,10 @@ const RECRUITER: Credentials = {
   email: 'recruiter@talentflow.dev',
   password: 'Recruiter123!',
 };
+const APPLICANT: Credentials = {
+  email: 'applicant@talentflow.dev',
+  password: 'Applicant123!',
+};
 
 describe('Auth (e2e)', () => {
   let app: INestApplication;
@@ -122,5 +126,53 @@ describe('Auth (e2e)', () => {
       .set(auth)
       .send(payload)
       .expect(409);
+  });
+
+  it('lets an applicant self-register, ignoring any role sent', async () => {
+    const uniqueEmail = `applicant_${Date.now()}@talentflow.dev`;
+
+    const res = await request(app.getHttpServer())
+      .post('/api/auth/register-applicant')
+      .send({
+        email: uniqueEmail,
+        password: 'Password123!',
+        first_name: 'Test',
+        last_name: 'Applicant',
+        role: 'manager', // must be ignored
+      })
+      .expect(201);
+    expect(res.body.user).toMatchObject({
+      email: uniqueEmail,
+      role: 'applicant',
+    });
+
+    const { body } = await login({
+      email: uniqueEmail,
+      password: 'Password123!',
+    }).expect(200);
+    expect(body.user.role).toBe('applicant');
+  });
+
+  it('keeps a signed-in applicant out of staff-only endpoints', async () => {
+    const { body } = await login(APPLICANT);
+    const auth = { Authorization: `Bearer ${body.token}` };
+
+    await request(app.getHttpServer()).get('/api/users').set(auth).expect(403);
+    await request(app.getHttpServer())
+      .get('/api/resumes/1/file')
+      .set(auth)
+      .expect(403);
+  });
+
+  it('excludes applicants from the staff accounts list', async () => {
+    const { body } = await login(MANAGER);
+    const res = await request(app.getHttpServer())
+      .get('/api/users')
+      .set({ Authorization: `Bearer ${body.token}` })
+      .expect(200);
+
+    expect(res.body.some((u: { role: string }) => u.role === 'applicant')).toBe(
+      false,
+    );
   });
 });

@@ -1,5 +1,10 @@
 import { Routes } from '@angular/router';
-import { authGuard, guestGuard, roleGuard } from './core/auth/auth.guards';
+import {
+  authGuard,
+  guestGuard,
+  roleGuard,
+  staffGuard,
+} from './core/auth/auth.guards';
 import { UserRole } from './core/auth/auth.models';
 import { unsavedChangesGuard } from './core/job-postings';
 
@@ -23,6 +28,26 @@ export const routes: Routes = [
           import('./pages/careers/careers').then((m) => m.Careers),
       },
       {
+        // Applicant account routes. Listed before ':id' so 'login'/'register'
+        // are matched as literal paths, not as a career-detail id.
+        path: 'login',
+        canActivate: [guestGuard],
+        title: 'Sign in · TalentFlow',
+        loadComponent: () =>
+          import('./pages/applicant-login/applicant-login').then(
+            (m) => m.ApplicantLogin,
+          ),
+      },
+      {
+        path: 'register',
+        canActivate: [guestGuard],
+        title: 'Create account · TalentFlow',
+        loadComponent: () =>
+          import('./pages/applicant-register/applicant-register').then(
+            (m) => m.ApplicantRegister,
+          ),
+      },
+      {
         path: ':id',
         title: 'Careers · TalentFlow',
         loadComponent: () =>
@@ -33,9 +58,10 @@ export const routes: Routes = [
     ],
   },
   {
-    // Everything inside the shell requires a signed-in user.
+    // Everything inside the shell requires a signed-in staff member
+    // (manager or recruiter).
     path: '',
-    canActivate: [authGuard],
+    canActivate: [authGuard, staffGuard],
     loadComponent: () => import('./layout/shell').then((m) => m.Shell),
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'dashboard' },

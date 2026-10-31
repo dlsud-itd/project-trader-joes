@@ -14,6 +14,7 @@ import type { AuthUser } from '../common/types/auth-user.js';
 import { UsersService } from '../users/users.service.js';
 import { AuthService } from './auth.service.js';
 import { LoginDto } from './dto/login.dto.js';
+import { RegisterApplicantDto } from './dto/register-applicant.dto.js';
 import { RegisterDto } from './dto/register.dto.js';
 
 @ApiTags('Authentication')
@@ -42,6 +43,17 @@ export class AuthController {
   async register(@Body() dto: RegisterDto) {
     const user = await this.auth.register(dto);
     return { message: 'User registered successfully.', user };
+  }
+
+  /**
+   * POST /api/auth/register-applicant — public self-registration for
+   * applicants.
+   */
+  @Public()
+  @Post('register-applicant')
+  async registerApplicant(@Body() dto: RegisterApplicantDto) {
+    const user = await this.auth.registerApplicant(dto);
+    return { message: 'Account created successfully.', user };
   }
 
   /**

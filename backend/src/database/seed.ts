@@ -29,6 +29,13 @@ export async function seedDatabase(db: Database): Promise<boolean> {
       last_name: 'Reyes',
       role: 'recruiter',
     },
+    {
+      email: 'applicant@talentflow.dev',
+      password_hash: await bcrypt.hash('Applicant123!', SALT_ROUNDS),
+      first_name: 'Ana',
+      last_name: 'Cruz',
+      role: 'applicant',
+    },
   ]);
   return true;
 }

@@ -10,7 +10,7 @@ import {
 import { environment } from '../../../environments/environment';
 import { apiErrorMessage } from '../../core/api/api-error';
 import { HealthService } from '../../core/api/health.service';
-import { ROLE_LABELS, UserRole } from '../../core/auth/auth.models';
+import { ROLE_LABELS, StaffRole, UserRole } from '../../core/auth/auth.models';
 import { AuthService } from '../../core/auth/auth.service';
 
 enum ApiStatus {
@@ -28,8 +28,11 @@ type ApiState =
 const AFTERNOON_STARTS_AT = 12;
 const EVENING_STARTS_AT = 18;
 
-/** What each role can do, from the TalentFlow user stories. */
-const ACCESS: Record<UserRole, string[]> = {
+/**
+ * What each role can do, from the TalentFlow user stories. The dashboard is
+ * staff-only.
+ */
+const ACCESS: Record<StaffRole, string[]> = {
   [UserRole.MANAGER]: [
     'Create, edit, and close job postings',
     'Assign recruiters to postings',
@@ -70,8 +73,11 @@ export class Dashboard implements OnInit {
     return `${part}, ${this.auth.user()?.first_name ?? ''}`;
   });
 
-  protected readonly role = computed(
-    () => this.auth.user()?.role ?? UserRole.RECRUITER,
+  /** The shell already keeps applicants out, so this is always staff. */
+  protected readonly role = computed<StaffRole>(() =>
+    this.auth.user()?.role === UserRole.MANAGER
+      ? UserRole.MANAGER
+      : UserRole.RECRUITER,
   );
   protected readonly roleLabel = computed(() => ROLE_LABELS[this.role()]);
   protected readonly access = computed(() => ACCESS[this.role()]);

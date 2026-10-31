@@ -8,6 +8,7 @@ import {
   LoginRequest,
   LoginResponse,
   LogoutReason,
+  RegisterApplicantRequest,
   RegisterRequest,
   RegisterResponse,
   User,
@@ -56,8 +57,19 @@ export class AuthService {
     );
   }
 
+  /** Creates a staff account. Managers only. */
   register(body: RegisterRequest): Observable<RegisterResponse> {
     return this.http.post<RegisterResponse>(`${this.api}/register`, body);
+  }
+
+  /** An applicant creates their own account from the careers site. */
+  registerApplicant(
+    body: RegisterApplicantRequest,
+  ): Observable<RegisterResponse> {
+    return this.http.post<RegisterResponse>(
+      `${this.api}/register-applicant`,
+      body,
+    );
   }
 
   /**
@@ -78,11 +90,17 @@ export class AuthService {
     );
   }
 
-  /** Tokens are stateless, so signing out only clears them on this device. */
+  /**
+   * Tokens are stateless, so signing out only clears them on this device.
+   * Applicants go back to the careers site; staff go to the staff login.
+   */
   logout(reason?: LogoutReason): void {
+    const destination = this.hasRole(UserRole.APPLICANT)
+      ? AppPath.CAREERS
+      : AppPath.LOGIN;
     this.clear();
     void this.router.navigate(
-      [AppPath.LOGIN],
+      [destination],
       reason ? { queryParams: { reason } } : {},
     );
   }

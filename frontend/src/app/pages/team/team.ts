@@ -6,6 +6,8 @@ import { apiErrorMessage } from '../../core/api/api-error';
 import {
   RegisterResponse,
   ROLE_LABELS,
+  STAFF_ROLES,
+  StaffRole,
   User,
   UserRole,
 } from '../../core/auth/auth.models';
@@ -13,7 +15,7 @@ import { AuthService } from '../../core/auth/auth.service';
 import { UsersService } from '../../core/users';
 
 type RoleOption = {
-  value: UserRole;
+  value: StaffRole;
   label: string;
 };
 
@@ -40,8 +42,12 @@ export class Team implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly usersService = inject(UsersService);
 
-  protected readonly roles: RoleOption[] = Object.values(UserRole).map(
-    (role: UserRole) => ({ value: role, label: ROLE_LABELS[role] }),
+  /**
+   * Only managers and recruiters are created here; applicants sign up on the
+   * careers site.
+   */
+  protected readonly roles: RoleOption[] = STAFF_ROLES.map(
+    (role: StaffRole) => ({ value: role, label: ROLE_LABELS[role] }),
   );
   protected readonly roleLabels = ROLE_LABELS;
   protected readonly isSaving = signal(false);
@@ -82,7 +88,10 @@ export class Team implements OnInit {
         ],
       },
     ],
-    role: [UserRole.RECRUITER, { validators: [Validators.required] }],
+    role: [
+      UserRole.RECRUITER as StaffRole,
+      { validators: [Validators.required] },
+    ],
   });
 
   ngOnInit(): void {

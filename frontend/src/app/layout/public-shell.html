@@ -5,7 +5,36 @@
       <span class="logo__name">TalentFlow</span>
       <span class="logo__tag">Careers</span>
     </a>
-    <a class="staff" routerLink="/login">Staff sign in</a>
+    <div class="actions">
+      @if (auth.hasRole(UserRole.APPLICANT)) {
+        <span class="account">
+          <span class="account__avatar" aria-hidden="true">{{
+            initials()
+          }}</span>
+          Hi, {{ auth.user()?.first_name }}
+        </span>
+        <button
+          class="tf-btn tf-btn--ghost tf-btn--sm"
+          type="button"
+          (click)="auth.logout()"
+        >
+          Sign out
+        </button>
+      } @else {
+        <a class="staff" routerLink="/login">Staff sign in</a>
+        @if (!auth.isAuthenticated()) {
+          <a class="tf-btn tf-btn--ghost tf-btn--sm" routerLink="/careers/login"
+            >Sign in</a
+          >
+          <a
+            class="tf-btn tf-btn--primary tf-btn--sm"
+            routerLink="/careers/register"
+          >
+            Create account
+          </a>
+        }
+      }
+    </div>
   </div>
 </header>
 

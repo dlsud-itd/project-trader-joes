@@ -4,12 +4,13 @@ import {
   HttpTestingController,
   provideHttpClientTesting,
 } from '@angular/common/http/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { environment } from '../../../environments/environment';
 import { User, UserRole } from './auth.models';
 import { AuthService } from './auth.service';
 
 const LOGIN_URL = `${environment.apiUrl}/auth/login`;
+const REGISTER_APPLICANT_URL = `${environment.apiUrl}/auth/register-applicant`;
 const TOKEN_KEY = 'talentflow.token';
 const FAKE_TOKEN = 'abc';
 const VALID_PASSWORD = 'Manager123!';
@@ -36,16 +37,19 @@ describe('AuthService', () => {
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
-        provideRouter([{ path: 'login', children: [] }]),
+        provideRouter([
+          { path: 'login', children: [] },
+          { path: 'careers', children: [] },
+        ]),
       ],
     });
     auth = TestBed.inject(AuthService);
     http = TestBed.inject(HttpTestingController);
   });
 
-  function signIn(): void {
-    auth.login({ email: manager.email, password: VALID_PASSWORD }).subscribe();
-    http.expectOne(LOGIN_URL).flush({ token: FAKE_TOKEN, user: manager });
+  function signIn(user: User = manager): void {
+    auth.login({ email: user.email, password: VALID_PASSWORD }).subscribe();
+    http.expectOne(LOGIN_URL).flush({ token: FAKE_TOKEN, user });
   }
 
   it('saves the token after login', () => {
@@ -77,5 +81,31 @@ describe('AuthService', () => {
 
     expect(auth.token()).toBeFalsy();
     expect(localStorage.getItem(TOKEN_KEY)).toBeNull();
+  });
+
+  it('sends a signed-in applicant to /careers on logout', () => {
+    signIn({ ...manager, role: UserRole.APPLICANT });
+
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate');
+    auth.logout();
+
+    expect(navigate).toHaveBeenCalledWith(['/careers'], {});
+  });
+
+  it('registers an applicant without a role in the request body', () => {
+    const body = {
+      email: 'ana@example.com',
+      password: 'Password123',
+      first_name: 'Ana',
+      last_name: 'Cruz',
+    };
+    auth.registerApplicant(body).subscribe();
+
+    const req = http.expectOne(REGISTER_APPLICANT_URL);
+    expect(req.request.body).toEqual(body);
+    req.flush({
+      message: 'Account created successfully.',
+      user: { ...manager, role: UserRole.APPLICANT },
+    });
   });
 });

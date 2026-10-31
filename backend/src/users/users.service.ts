@@ -5,9 +5,14 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import bcrypt from 'bcryptjs';
-import { asc, eq } from 'drizzle-orm';
+import { asc, eq, inArray } from 'drizzle-orm';
 import { DB, type Database } from '../database/database.module.js';
-import { type User, type UserRole, users } from '../database/schema.js';
+import {
+  STAFF_ROLES,
+  type User,
+  type UserRole,
+  users,
+} from '../database/schema.js';
 import { SALT_ROUNDS } from './users.constants.js';
 
 export type PublicUser = Omit<User, 'password_hash'>;
@@ -35,9 +40,13 @@ export class UsersService {
     return UsersService.toPublic(user);
   }
 
-  /** Every staff account, sorted by last name, without password hashes. */
+  /**
+   * Every staff account (managers and recruiters), sorted by last name,
+   * without password hashes.
+   */
   async findAll(): Promise<PublicUser[]> {
     const rows = await this.db.query.users.findMany({
+      where: inArray(users.role, STAFF_ROLES),
       orderBy: [asc(users.last_name)],
     });
     return rows.map((row: User) => UsersService.toPublic(row));

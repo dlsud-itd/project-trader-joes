@@ -2,13 +2,13 @@ import { UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import bcrypt from 'bcryptjs';
 import type { User } from '../database/schema.js';
-import type { UsersService } from '../users/users.service.js';
+import type { PublicUser, UsersService } from '../users/users.service.js';
 import { AuthService } from './auth.service.js';
 
 describe('AuthService', () => {
   const jwt = new JwtService({ secret: 'test-secret' });
   let storedUser: User;
-  let users: Pick<UsersService, 'findByEmail'>;
+  let users: Pick<UsersService, 'findByEmail' | 'create'>;
   let service: AuthService;
 
   beforeAll(async () => {
@@ -28,6 +28,9 @@ describe('AuthService', () => {
     users = {
       findByEmail: vi.fn(async (email: string) =>
         email === storedUser.email ? storedUser : undefined,
+      ),
+      create: vi.fn(
+        async (input) => ({ id: 9, ...input }) as unknown as PublicUser,
       ),
     };
     service = new AuthService(users as UsersService, jwt);
@@ -65,5 +68,18 @@ describe('AuthService', () => {
         password: 'Manager123!',
       }),
     ).rejects.toThrow('Invalid email or password');
+  });
+
+  it('registers applicants with the applicant role only', async () => {
+    await service.registerApplicant({
+      email: 'ana@example.com',
+      password: 'Password123',
+      first_name: 'Ana',
+      last_name: 'Cruz',
+    });
+
+    expect(users.create).toHaveBeenCalledWith(
+      expect.objectContaining({ role: 'applicant' }),
+    );
   });
 });
