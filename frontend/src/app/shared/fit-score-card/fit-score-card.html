@@ -1,0 +1,175 @@
+@let s = screening();
+
+<section class="card" [attr.aria-labelledby]="titleId">
+  <header class="card__head">
+    <div>
+      <h2 [id]="titleId">AI fit score</h2>
+      @if (s && !busy()) {
+        <p class="card__sub">
+          Screened {{ s.screened_at | date: 'MMM d, y · h:mm a' }}
+          @if (s.retry_count > 0) {
+            · attempt {{ s.retry_count + 1 }}
+          }
+        </p>
+      }
+    </div>
+    @if (isScored()) {
+      <button
+        class="tf-btn tf-btn--ghost tf-btn--sm"
+        type="button"
+        (click)="retry.emit()"
+      >
+        Re-score
+      </button>
+    }
+  </header>
+
+  @if (busy()) {
+    <div class="state">
+      <app-fit-score-badge variant="hero" [busy]="true" />
+      <p class="state__text" aria-live="polite">
+        Reading the resume against each requirement. This usually takes a few
+        seconds.
+      </p>
+    </div>
+  } @else if (!s) {
+    <div class="state">
+      <app-fit-score-badge variant="hero" />
+      <p class="state__text">
+        This application hasn't been screened. Scoring compares the resume
+        against the posting's requirements.
+      </p>
+      <button
+        class="tf-btn tf-btn--primary tf-btn--sm"
+        type="button"
+        (click)="run.emit()"
+      >
+        Score resume
+      </button>
+    </div>
+  } @else if (s.status === 'failed') {
+    <div class="state">
+      <app-fit-score-badge
+        variant="hero"
+        status="failed"
+        (retry)="retry.emit()"
+      />
+      <p class="state__text">
+        The resume couldn't be scored. This can happen when its text can't be
+        read or the AI service doesn't respond. Retrying usually works.
+      </p>
+    </div>
+  } @else {
+    @let c = counts();
+
+    <div class="summary">
+      <app-fit-score-badge
+        variant="hero"
+        status="completed"
+        [score]="s.fit_score"
+      />
+
+      <div class="summary__body">
+        <p class="summary__lead">
+          Meets <strong>{{ c.met }} of {{ c.total }}</strong>
+          {{ c.total === 1 ? 'requirement' : 'requirements' }}
+        </p>
+
+        @if (c.total) {
+          <div
+            class="bar"
+            role="img"
+            [attr.aria-label]="
+              c.met +
+              ' met, ' +
+              c.partial +
+              ' partial, ' +
+              c.missing +
+              ' missing'
+            "
+          >
+            @for (level of levels; track level) {
+              @if (c[level]) {
+                <span
+                  class="bar__seg"
+                  [class]="'is-' + level"
+                  [style.width.%]="share(level)"
+                ></span>
+              }
+            }
+          </div>
+
+          <ul class="legend" aria-hidden="true">
+            <li class="is-met">{{ c.met }} met</li>
+            <li class="is-partial">{{ c.partial }} partial</li>
+            <li class="is-missing">{{ c.missing }} missing</li>
+          </ul>
+        }
+      </div>
+    </div>
+
+    @if (s.explanation) {
+      <div class="why">
+        <h3>Why this score</h3>
+        <p>{{ s.explanation }}</p>
+      </div>
+    }
+
+    @if (c.total) {
+      <div class="reqs">
+        <h3>Requirement breakdown</h3>
+        <ol class="reqs__list">
+          @for (m of visibleMatches(); track $index) {
+            <li class="req" [class]="'is-' + m.match">
+              <span class="req__status">
+                @switch (m.match) {
+                  @case ('met') {
+                    <svg viewBox="0 0 16 16" aria-hidden="true">
+                      <circle cx="8" cy="8" r="6.5" />
+                      <path d="M5.2 8.2l1.9 1.9 3.7-4" />
+                    </svg>
+                  }
+                  @case ('partial') {
+                    <svg viewBox="0 0 16 16" aria-hidden="true">
+                      <circle cx="8" cy="8" r="6.5" />
+                      <path d="M5.3 8h5.4" />
+                    </svg>
+                  }
+                  @default {
+                    <svg viewBox="0 0 16 16" aria-hidden="true">
+                      <circle cx="8" cy="8" r="6.5" />
+                      <path d="M6 6l4 4M10 6l-4 4" />
+                    </svg>
+                  }
+                }
+                {{ matchLabel[m.match] }}
+              </span>
+              <div class="req__body">
+                <p class="req__name">{{ m.requirement }}</p>
+                @if (m.evidence) {
+                  <p class="req__evidence">{{ m.evidence }}</p>
+                }
+              </div>
+            </li>
+          }
+        </ol>
+
+        @if (hiddenCount() > 0 || expanded()) {
+          <button
+            class="reqs__more"
+            type="button"
+            [attr.aria-expanded]="expanded()"
+            (click)="expanded.set(!expanded())"
+          >
+            {{ expanded() ? 'Show less' : 'Show all ' + matches().length }}
+          </button>
+        }
+      </div>
+    }
+
+    <p class="note">
+      Met requirements count fully and partial ones count half. AI-generated, so
+      check the resume before moving a candidate.
+    </p>
+  }
+</section>
