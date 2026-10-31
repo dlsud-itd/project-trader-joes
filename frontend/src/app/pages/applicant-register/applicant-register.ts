@@ -1,7 +1,9 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { finalize, from, switchMap } from 'rxjs';
 import { apiErrorMessage } from '../../core/api/api-error';
+import { AppPath } from '../../core/app-paths';
 import { AuthService } from '../../core/auth/auth.service';
 
 @Component({
@@ -37,22 +39,27 @@ export class ApplicantRegister {
     return control.invalid && (control.touched || control.dirty);
   }
 
-  async submit(): Promise<void> {
+  /** Creates the account, signs in with it, then opens the careers site. */
+  submit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
     }
     this.submitting.set(true);
     this.error.set(null);
-    try {
-      const { email, password } = this.form.getRawValue();
-      await this.auth.registerApplicant(this.form.getRawValue());
-      await this.auth.login({ email, password });
-      await this.router.navigateByUrl('/careers');
-    } catch (err) {
-      this.error.set(apiErrorMessage(err, 'Could not create your account. Try again.'));
-    } finally {
-      this.submitting.set(false);
-    }
+    const { email, password } = this.form.getRawValue();
+    this.auth
+      .registerApplicant(this.form.getRawValue())
+      .pipe(
+        switchMap(() => this.auth.login({ email, password })),
+        switchMap(() => from(this.router.navigateByUrl(AppPath.CAREERS))),
+        finalize(() => this.submitting.set(false)),
+      )
+      .subscribe({
+        error: (err: unknown) =>
+          this.error.set(
+            apiErrorMessage(err, 'Could not create your account. Try again.'),
+          ),
+      });
   }
 }

@@ -7,10 +7,10 @@ import type { LoginDto } from './dto/login.dto.js';
 import type { RegisterApplicantDto } from './dto/register-applicant.dto.js';
 import type { RegisterDto } from './dto/register.dto.js';
 
-export interface LoginResult {
+export type LoginResult = {
   token: string;
   user: Pick<PublicUser, 'id' | 'email' | 'first_name' | 'last_name' | 'role'>;
-}
+};
 
 @Injectable()
 export class AuthService {
@@ -21,13 +21,19 @@ export class AuthService {
 
   async login({ email, password }: LoginDto): Promise<LoginResult> {
     const user = await this.users.findByEmail(email);
-    // Same message for unknown email and wrong password, so emails can't be probed.
-    const valid = user && (await bcrypt.compare(password, user.password_hash));
-    if (!user || !valid) {
+    // Same message for unknown email and wrong password, so emails can't be
+    // probed.
+    const isValid =
+      user && (await bcrypt.compare(password, user.password_hash));
+    if (!user || !isValid) {
       throw new UnauthorizedException('Invalid email or password');
     }
 
-    const payload: JwtPayload = { sub: user.id, email: user.email, role: user.role };
+    const payload: JwtPayload = {
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+    };
     return {
       token: await this.jwt.signAsync(payload),
       user: {
@@ -44,7 +50,10 @@ export class AuthService {
     return this.users.create(dto);
   }
 
-  /** Public self-registration. The role is always 'applicant', never taken from the request. */
+  /**
+   * Public self-registration. The role is always 'applicant', never taken
+   * from the request.
+   */
   registerApplicant(dto: RegisterApplicantDto): Promise<PublicUser> {
     return this.users.create({ ...dto, role: 'applicant' });
   }

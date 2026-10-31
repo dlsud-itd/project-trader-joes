@@ -1,7 +1,9 @@
 import { Component, inject, input, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { finalize, from, switchMap } from 'rxjs';
 import { apiErrorMessage } from '../../core/api/api-error';
+import { AppPath } from '../../core/app-paths';
 import { AuthService } from '../../core/auth/auth.service';
 
 @Component({
@@ -31,20 +33,24 @@ export class ApplicantLogin {
     return control.invalid && (control.touched || control.dirty);
   }
 
-  async submit(): Promise<void> {
+  submit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
     }
     this.submitting.set(true);
     this.error.set(null);
-    try {
-      await this.auth.login(this.form.getRawValue());
-      await this.router.navigateByUrl(this.returnUrl() || '/careers');
-    } catch (err) {
-      this.error.set(apiErrorMessage(err, 'Sign-in failed. Try again.'));
-    } finally {
-      this.submitting.set(false);
-    }
+    this.auth
+      .login(this.form.getRawValue())
+      .pipe(
+        switchMap(() =>
+          from(this.router.navigateByUrl(this.returnUrl() || AppPath.CAREERS)),
+        ),
+        finalize(() => this.submitting.set(false)),
+      )
+      .subscribe({
+        error: (err: unknown) =>
+          this.error.set(apiErrorMessage(err, 'Sign-in failed. Try again.')),
+      });
   }
 }

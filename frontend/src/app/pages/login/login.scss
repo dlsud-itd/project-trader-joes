@@ -89,20 +89,6 @@
     margin: 0;
     padding: 0;
     list-style: none;
-
-    li {
-      display: grid;
-      gap: 2px;
-      padding: 14px;
-      border: 1px solid rgb(255 255 255 / 10%);
-      border-radius: var(--tf-radius);
-      background: rgb(255 255 255 / 4%);
-
-      &:last-child {
-        border-color: rgb(13 112 104 / 70%);
-        background: rgb(13 112 104 / 18%);
-      }
-    }
   }
 
   &__count {
@@ -115,6 +101,20 @@
   &__name {
     font-size: 13px;
     color: #a9b6c3;
+  }
+}
+
+.pipeline__stages li {
+  display: grid;
+  gap: 2px;
+  padding: 14px;
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: var(--tf-radius);
+  background: rgb(255 255 255 / 4%);
+
+  &:last-child {
+    border-color: rgb(13 112 104 / 70%);
+    background: rgb(13 112 104 / 18%);
   }
 }
 

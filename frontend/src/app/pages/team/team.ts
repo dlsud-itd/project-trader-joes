@@ -1,16 +1,36 @@
 import { DatePipe } from '@angular/common';
-import { HttpClient } from '@angular/common/http';
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { firstValueFrom } from 'rxjs';
-import { environment } from '../../../environments/environment';
+import { finalize } from 'rxjs';
 import { apiErrorMessage } from '../../core/api/api-error';
-import { ROLE_LABELS, STAFF_ROLE_LABELS, StaffRole, User } from '../../core/auth/auth.models';
+import {
+  RegisterResponse,
+  ROLE_LABELS,
+  STAFF_ROLES,
+  StaffRole,
+  User,
+  UserRole,
+} from '../../core/auth/auth.models';
 import { AuthService } from '../../core/auth/auth.service';
+import { UsersService } from '../../core/users';
+
+type RoleOption = {
+  value: StaffRole;
+  label: string;
+};
+
+/** Limits that match the API's register validation. */
+const NAME_MAX_LENGTH = 100;
+const PASSWORD_MIN_LENGTH = 8;
+/** At least one letter and one number. */
+const PASSWORD_PATTERN = /(?=.*[A-Za-z])(?=.*\d)/;
+
+const LOAD_FAILED_MESSAGE = 'Could not load accounts.';
+const CREATE_FAILED_MESSAGE = 'Could not create the account.';
 
 /**
- * Manager-only page for staff accounts:
- * lists every account (GET /api/users) and creates new ones (POST /api/auth/register).
+ * Manager-only page for staff accounts: lists every account
+ * (GET /api/users) and creates new ones (POST /api/auth/register).
  */
 @Component({
   selector: 'app-team',
@@ -20,66 +40,98 @@ import { AuthService } from '../../core/auth/auth.service';
 })
 export class Team implements OnInit {
   private readonly auth = inject(AuthService);
-  private readonly http = inject(HttpClient);
+  private readonly usersService = inject(UsersService);
 
-  /** Only managers and recruiters can be created here; applicants self-register on the careers site. */
-  protected readonly roles = Object.entries(STAFF_ROLE_LABELS) as [StaffRole, string][];
+  /**
+   * Only managers and recruiters are created here; applicants sign up on the
+   * careers site.
+   */
+  protected readonly roles: RoleOption[] = STAFF_ROLES.map(
+    (role: StaffRole) => ({ value: role, label: ROLE_LABELS[role] }),
+  );
   protected readonly roleLabels = ROLE_LABELS;
-  protected readonly saving = signal(false);
-  protected readonly error = signal<string | null>(null);
+  protected readonly isSaving = signal(false);
+  protected readonly errorMessage = signal<string | null>(null);
   protected readonly created = signal<User[]>([]);
 
   protected readonly users = signal<User[]>([]);
-  protected readonly loading = signal(true);
+  protected readonly isLoading = signal(true);
   protected readonly loadError = signal<string | null>(null);
 
   protected readonly form = inject(FormBuilder).nonNullable.group({
-    first_name: ['', [Validators.required, Validators.maxLength(100)]],
-    last_name: ['', [Validators.required, Validators.maxLength(100)]],
-    email: ['', [Validators.required, Validators.email]],
+    first_name: [
+      '',
+      {
+        validators: [
+          Validators.required,
+          Validators.maxLength(NAME_MAX_LENGTH),
+        ],
+      },
+    ],
+    last_name: [
+      '',
+      {
+        validators: [
+          Validators.required,
+          Validators.maxLength(NAME_MAX_LENGTH),
+        ],
+      },
+    ],
+    email: ['', { validators: [Validators.required, Validators.email] }],
     password: [
       '',
-      [Validators.required, Validators.minLength(8), Validators.pattern(/(?=.*[A-Za-z])(?=.*\d)/)],
+      {
+        validators: [
+          Validators.required,
+          Validators.minLength(PASSWORD_MIN_LENGTH),
+          Validators.pattern(PASSWORD_PATTERN),
+        ],
+      },
     ],
-    role: ['recruiter' as StaffRole, Validators.required],
+    role: [
+      UserRole.RECRUITER as StaffRole,
+      { validators: [Validators.required] },
+    ],
   });
 
-  async ngOnInit(): Promise<void> {
-    try {
-      const list = await firstValueFrom(this.http.get<User[]>(`${environment.apiUrl}/users`));
-      this.users.set(list);
-    } catch (err) {
-      this.loadError.set(apiErrorMessage(err, 'Could not load accounts.'));
-    } finally {
-      this.loading.set(false);
-    }
+  ngOnInit(): void {
+    this.usersService
+      .list()
+      .pipe(finalize(() => this.isLoading.set(false)))
+      .subscribe({
+        next: (list: User[]) => this.users.set(list),
+        error: (err: unknown) =>
+          this.loadError.set(apiErrorMessage(err, LOAD_FAILED_MESSAGE)),
+      });
   }
 
-  showError(field: keyof typeof this.form.controls): boolean {
+  shouldShowError(field: keyof typeof this.form.controls): boolean {
     const control = this.form.controls[field];
     return control.invalid && (control.touched || control.dirty);
   }
 
-  async submit(): Promise<void> {
+  submit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
     }
-    this.saving.set(true);
-    this.error.set(null);
-    try {
-      const { user } = await this.auth.register(this.form.getRawValue());
-      this.created.update((list) => [user, ...list]);
-      this.users.update((list) =>
-        [...list, user].sort((a, b) => a.last_name.localeCompare(b.last_name)),
-      );
-      this.form.reset({ role: this.form.controls.role.value });
-    } catch (err) {
-      this.error.set(apiErrorMessage(err, 'Could not create the account.'));
-    } finally {
-      this.saving.set(false);
-    }
+    this.isSaving.set(true);
+    this.errorMessage.set(null);
+    this.auth
+      .register(this.form.getRawValue())
+      .pipe(finalize(() => this.isSaving.set(false)))
+      .subscribe({
+        next: ({ user }: RegisterResponse) => {
+          this.created.update((list: User[]) => [user, ...list]);
+          this.users.update((list: User[]) =>
+            [...list, user].sort((a: User, b: User) =>
+              a.last_name.localeCompare(b.last_name),
+            ),
+          );
+          this.form.reset({ role: this.form.controls.role.value });
+        },
+        error: (err: unknown) =>
+          this.errorMessage.set(apiErrorMessage(err, CREATE_FAILED_MESSAGE)),
+      });
   }
 }
-
-

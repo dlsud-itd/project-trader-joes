@@ -1,8 +1,5 @@
-/**
- * Production settings, used by `ng build` (and by Appwrite Sites).
- * Replace apiUrl with the Render URL of the backend once it is deployed.
- */
+/** Production settings, used by `ng build` (and by Appwrite Sites). */
 export const environment = {
-  production: true,
+  isProduction: true,
   apiUrl: 'https://talentflow-api-0j7m.onrender.com/api',
 };

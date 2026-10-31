@@ -1,56 +1,66 @@
+/**
+ * Account roles. Managers and recruiters are staff; applicants sign up on
+ * the careers site.
+ */
+export enum UserRole {
+  MANAGER = 'manager',
+  RECRUITER = 'recruiter',
+  APPLICANT = 'applicant',
+}
 
-export type StaffRole = 'manager' | 'recruiter';
+/** Roles that can sign in to the staff area. */
+export type StaffRole = UserRole.MANAGER | UserRole.RECRUITER;
 
-export type UserRole = StaffRole | 'applicant';
+export const STAFF_ROLES: StaffRole[] = [UserRole.MANAGER, UserRole.RECRUITER];
 
 export const ROLE_LABELS: Record<UserRole, string> = {
-  manager: 'Recruitment Manager',
-  recruiter: 'Recruiter',
-  applicant: 'Applicant',
+  [UserRole.MANAGER]: 'Recruitment Manager',
+  [UserRole.RECRUITER]: 'Recruiter',
+  [UserRole.APPLICANT]: 'Applicant',
 };
 
-export const STAFF_ROLE_LABELS: Record<StaffRole, string> = {
-  manager: 'Recruitment Manager',
-  recruiter: 'Recruiter',
-};
+/** Why the user was signed out; sent to the login page as `?reason=`. */
+export enum LogoutReason {
+  EXPIRED = 'expired',
+}
 
-export interface User {
+export type User = {
   id: number;
   email: string;
   first_name: string;
   last_name: string;
   role: UserRole;
   created_at: string;
-}
+};
 
-export interface LoginRequest {
+export type LoginRequest = {
   email: string;
   password: string;
-}
+};
 
-export interface LoginResponse {
+export type LoginResponse = {
   token: string;
   user: User;
-}
+};
 
-export interface RegisterRequest {
+/** Creates a staff account (manager only). */
+export type RegisterRequest = {
   email: string;
   password: string;
   first_name: string;
   last_name: string;
   role: StaffRole;
-}
+};
 
-export interface RegisterResponse {
-  message: string;
-  user: User;
-}
-
-export interface RegisterApplicantRequest {
+/** An applicant's own sign-up from the careers site. */
+export type RegisterApplicantRequest = {
   email: string;
   password: string;
   first_name: string;
   last_name: string;
-}
+};
 
-
+export type RegisterResponse = {
+  message: string;
+  user: User;
+};

@@ -29,7 +29,9 @@ describe('AuthService', () => {
       findByEmail: vi.fn(async (email: string) =>
         email === storedUser.email ? storedUser : undefined,
       ),
-      create: vi.fn(async (input) => ({ id: 9, ...input }) as unknown as PublicUser),
+      create: vi.fn(
+        async (input) => ({ id: 9, ...input }) as unknown as PublicUser,
+      ),
     };
     service = new AuthService(users as UsersService, jwt);
   });
@@ -61,11 +63,14 @@ describe('AuthService', () => {
 
   it('rejects an unknown email with the same message', async () => {
     await expect(
-      service.login({ email: 'nobody@talentflow.dev', password: 'Manager123!' }),
+      service.login({
+        email: 'nobody@talentflow.dev',
+        password: 'Manager123!',
+      }),
     ).rejects.toThrow('Invalid email or password');
   });
 
-  it('always registers applicants with the applicant role, regardless of the DTO', async () => {
+  it('registers applicants with the applicant role only', async () => {
     await service.registerApplicant({
       email: 'ana@example.com',
       password: 'Password123',

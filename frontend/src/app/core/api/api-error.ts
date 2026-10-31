@@ -1,15 +1,27 @@
 import { HttpErrorResponse } from '@angular/common/http';
 
-/**
- * Turns an API error into a sentence the user can act on.
- * The backend always responds with `{ error: string, details?: string[] }`.
- */
-export function apiErrorMessage(err: unknown, fallback = 'Something went wrong. Try again.'): string {
+/** The backend's error body: `{ error: string, details?: string[] }`. */
+export type ApiErrorBody = {
+  error?: string;
+  details?: string[];
+};
+
+/** Status the browser reports when the request never reached the server. */
+const NO_RESPONSE_STATUS = 0;
+
+const DEFAULT_ERROR_MESSAGE = 'Something went wrong. Try again.';
+const UNREACHABLE_MESSAGE =
+  'Can’t reach the server. Check your connection, ' +
+  'or wait a moment if the server is waking up.';
+
+/** Turns an API error into a sentence the user can act on. */
+export function apiErrorMessage(
+  err: unknown,
+  fallback: string = DEFAULT_ERROR_MESSAGE,
+): string {
   if (!(err instanceof HttpErrorResponse)) return fallback;
-  if (err.status === 0) {
-    return 'Can’t reach the server. Check your connection, or wait a moment if the server is waking up.';
-  }
-  const body = err.error as { error?: string; details?: string[] } | null;
+  if (err.status === NO_RESPONSE_STATUS) return UNREACHABLE_MESSAGE;
+  const body = err.error as ApiErrorBody | null;
   if (body?.details?.length) return body.details.join(' ');
   return body?.error ?? fallback;
 }

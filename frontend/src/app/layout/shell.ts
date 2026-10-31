@@ -1,6 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
+  Event,
   NavigationEnd,
   Router,
   RouterLink,
@@ -8,7 +9,7 @@ import {
   RouterOutlet,
 } from '@angular/router';
 import { filter } from 'rxjs';
-import { ROLE_LABELS } from '../core/auth/auth.models';
+import { ROLE_LABELS, UserRole } from '../core/auth/auth.models';
 import { AuthService } from '../core/auth/auth.service';
 
 /**
@@ -22,19 +23,21 @@ import { AuthService } from '../core/auth/auth.service';
   templateUrl: './shell.html',
   styleUrl: './shell.scss',
   host: {
-    '(document:keydown.escape)': 'menuOpen.set(false)',
+    '(document:keydown.escape)': 'isMenuOpen.set(false)',
   },
 })
 export class Shell {
   protected readonly auth = inject(AuthService);
 
+  protected readonly UserRole = UserRole;
+
   /** Drawer state on small screens. */
-  protected readonly menuOpen = signal(false);
+  protected readonly isMenuOpen = signal(false);
 
   protected readonly initials = computed(() => {
-    const u = this.auth.user();
-    return u
-      ? `${u.first_name[0] ?? ''}${u.last_name[0] ?? ''}`.toUpperCase()
+    const user = this.auth.user();
+    return user
+      ? `${user.first_name[0] ?? ''}${user.last_name[0] ?? ''}`.toUpperCase()
       : '';
   });
 
@@ -47,9 +50,9 @@ export class Shell {
     // Close the drawer after picking a page.
     inject(Router)
       .events.pipe(
-        filter((e) => e instanceof NavigationEnd),
+        filter((event: Event) => event instanceof NavigationEnd),
         takeUntilDestroyed(),
       )
-      .subscribe(() => this.menuOpen.set(false));
+      .subscribe(() => this.isMenuOpen.set(false));
   }
 }

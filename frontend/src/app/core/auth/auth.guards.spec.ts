@@ -7,6 +7,7 @@ import {
   RouterStateSnapshot,
   UrlTree,
 } from '@angular/router';
+import { firstValueFrom, isObservable, Observable, of } from 'rxjs';
 import { authGuard, guestGuard, roleGuard, staffGuard } from './auth.guards';
 import { UserRole } from './auth.models';
 import { AuthService } from './auth.service';
@@ -18,6 +19,7 @@ const LOGIN_URL = '/login?returnUrl=%2Fteam';
 const route = {} as ActivatedRouteSnapshot;
 const state = { url: TEAM_URL } as RouterStateSnapshot;
 
+/** Sets up TestBed with a fake AuthService for a role (or nobody). */
 function signedInAs(role: UserRole | null): void {
   TestBed.configureTestingModule({
     providers: [
@@ -27,15 +29,17 @@ function signedInAs(role: UserRole | null): void {
         useValue: {
           hasRole: (...roles: UserRole[]): boolean =>
             role !== null && roles.includes(role),
-          restoreSession: async (): Promise<boolean> => role !== null,
+          restoreSession: (): Observable<boolean> => of(role !== null),
         },
       },
     ],
   });
 }
 
+/** Runs a guard and waits for its answer, whatever form it takes. */
 async function runGuard(guard: CanActivateFn): Promise<unknown> {
-  return TestBed.runInInjectionContext(() => guard(route, state));
+  const result = TestBed.runInInjectionContext(() => guard(route, state));
+  return isObservable(result) ? firstValueFrom(result) : result;
 }
 
 function urlOf(result: unknown): string {
@@ -44,17 +48,17 @@ function urlOf(result: unknown): string {
 
 describe('roleGuard', () => {
   it('lets a manager open /team', async () => {
-    signedInAs('manager');
+    signedInAs(UserRole.MANAGER);
 
-    const result = await runGuard(roleGuard('manager'));
+    const result = await runGuard(roleGuard(UserRole.MANAGER));
 
     expect(result).toBe(true);
   });
 
   it('sends a recruiter to /dashboard?denied=1', async () => {
-    signedInAs('recruiter');
+    signedInAs(UserRole.RECRUITER);
 
-    const result = await runGuard(roleGuard('manager'));
+    const result = await runGuard(roleGuard(UserRole.MANAGER));
 
     expect(result).toBeInstanceOf(UrlTree);
     expect(urlOf(result)).toBe(DENIED_URL);
@@ -73,7 +77,7 @@ describe('authGuard', () => {
 
 describe('staffGuard', () => {
   it('lets a recruiter into the staff area', async () => {
-    signedInAs('recruiter');
+    signedInAs(UserRole.RECRUITER);
 
     const result = await runGuard(staffGuard);
 
@@ -81,7 +85,7 @@ describe('staffGuard', () => {
   });
 
   it('sends an applicant to the careers site instead', async () => {
-    signedInAs('applicant');
+    signedInAs(UserRole.APPLICANT);
 
     const result = await runGuard(staffGuard);
 
@@ -100,7 +104,7 @@ describe('guestGuard', () => {
   });
 
   it('sends a signed-in applicant to /careers, not /dashboard', async () => {
-    signedInAs('applicant');
+    signedInAs(UserRole.APPLICANT);
 
     const result = await runGuard(guestGuard);
 
@@ -108,7 +112,7 @@ describe('guestGuard', () => {
   });
 
   it('sends a signed-in manager to /dashboard', async () => {
-    signedInAs('manager');
+    signedInAs(UserRole.MANAGER);
 
     const result = await runGuard(guestGuard);
 

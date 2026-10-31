@@ -1,7 +1,10 @@
 <header class="head">
   <div>
     <h1>{{ greeting() }}</h1>
-    <p>You’re signed in as a <strong>{{ roleLabel() }}</strong>.</p>
+    <p>
+      You’re signed in as a <strong>{{ roleLabel() }}</strong
+      >.
+    </p>
   </div>
 </header>
 
@@ -19,13 +22,13 @@
         <dt>API and database</dt>
         <dd>
           @switch (api().kind) {
-            @case ('checking') {
+            @case (ApiStatus.CHECKING) {
               <span class="pill pill--neutral">Checking…</span>
             }
-            @case ('up') {
+            @case (ApiStatus.UP) {
               <span class="pill pill--ok">Online</span>
             }
-            @case ('down') {
+            @case (ApiStatus.DOWN) {
               <span class="pill pill--down">Offline</span>
             }
           }
@@ -36,13 +39,13 @@
         <dd class="mono">{{ apiUrl }}</dd>
       </div>
       @if (api(); as state) {
-        @if (state.kind === 'up') {
+        @if (state.kind === ApiStatus.UP) {
           <div class="status__row">
             <dt>Last checked</dt>
             <dd>{{ state.checkedAt | date: 'mediumTime' }}</dd>
           </div>
         }
-        @if (state.kind === 'down') {
+        @if (state.kind === ApiStatus.DOWN) {
           <p class="status__error">{{ state.message }}</p>
         }
       }
@@ -51,7 +54,7 @@
       class="tf-btn tf-btn--ghost"
       type="button"
       (click)="checkApi()"
-      [disabled]="api().kind === 'checking'"
+      [disabled]="api().kind === ApiStatus.CHECKING"
     >
       Check again
     </button>

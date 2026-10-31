@@ -7,7 +7,7 @@ import {
 import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
 import { environment } from '../../../environments/environment';
-import { User } from '../../core/auth/auth.models';
+import { User, UserRole } from '../../core/auth/auth.models';
 import { ApplicantRegister } from './applicant-register';
 
 const REGISTER_URL = `${environment.apiUrl}/auth/register-applicant`;
@@ -25,7 +25,7 @@ const applicant: User = {
   email: VALID.email,
   first_name: VALID.first_name,
   last_name: VALID.last_name,
-  role: 'applicant',
+  role: UserRole.APPLICANT,
   created_at: '2026-10-16T00:00:00Z',
 };
 
@@ -67,16 +67,16 @@ describe('ApplicantRegister page', () => {
     expect(findElement('.tf-error').textContent).toContain('8 characters');
   });
 
-  it('does not send anything when the form is empty', async () => {
-    await page.submit();
+  it('does not send anything when the form is empty', () => {
+    page.submit();
 
     http.expectNone(REGISTER_URL);
     expect(page.submitting()).toBe(false);
   });
 
-  it('registers, then signs in, and disables the button while busy', async () => {
+  it('registers, signs in, and disables the button while busy', async () => {
     page.form.setValue(VALID);
-    const submitting = page.submit();
+    page.submit();
     fixture.detectChanges();
 
     expect(findSubmitButton().disabled).toBe(true);
@@ -84,10 +84,9 @@ describe('ApplicantRegister page', () => {
     http
       .expectOne(REGISTER_URL)
       .flush({ message: 'Account created successfully.', user: applicant });
-    // Let the registration promise resolve before the component fires the follow-up login call.
-    await new Promise((resolve) => setTimeout(resolve));
+    // The sign-in request goes out as soon as registration succeeds.
     http.expectOne(LOGIN_URL).flush({ token: FAKE_TOKEN, user: applicant });
-    await submitting;
+    await fixture.whenStable();
     fixture.detectChanges();
 
     expect(findSubmitButton().disabled).toBe(false);

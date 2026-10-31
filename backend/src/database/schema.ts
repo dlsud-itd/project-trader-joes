@@ -29,7 +29,10 @@ export const userRoleEnum = pgEnum('user_role', [
   'applicant',
 ]);
 
-/** Roles created through POST /api/auth/register (manager-only). Applicants self-register instead. */
+/**
+ * Roles created through POST /api/auth/register (manager-only). Applicants
+ * self-register instead.
+ */
 export const STAFF_ROLES = ['manager', 'recruiter'] as const;
 
 export const users = pgTable('users', {
