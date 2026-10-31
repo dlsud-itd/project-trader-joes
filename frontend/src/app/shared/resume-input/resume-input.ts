@@ -12,14 +12,13 @@ const BYTES_PER_MB = BYTES_PER_KB * BYTES_PER_KB;
 
 /** Matches the API, which also checks the file's contents. */
 export const RESUME_MAX_BYTES = 5 * BYTES_PER_MB;
-export const RESUME_ACCEPT = '.pdf,.docx';
-const RESUME_EXTENSIONS = /\.(pdf|docx)$/i;
+/** Resumes are PDF only. */
+export const RESUME_ACCEPT = '.pdf,application/pdf';
+const RESUME_EXTENSION = /\.pdf$/i;
 
 /** Returns why a file can't be used as a resume, or null if it's fine. */
 export function resumeFileError(file: File): string | null {
-  if (!RESUME_EXTENSIONS.test(file.name)) {
-    return 'Choose a PDF or Word (.docx) file.';
-  }
+  if (!RESUME_EXTENSION.test(file.name)) return 'Choose a PDF file.';
   if (file.size === 0) return 'That file is empty. Choose another one.';
   if (file.size > RESUME_MAX_BYTES) {
     return 'The resume must be 5 MB or smaller.';

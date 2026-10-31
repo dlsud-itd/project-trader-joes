@@ -1,0 +1,1 @@
+ALTER TABLE "ai_screenings" ADD COLUMN "failure_reason" text;

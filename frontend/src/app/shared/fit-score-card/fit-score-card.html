@@ -47,16 +47,20 @@
         Score resume
       </button>
     </div>
-  } @else if (s.status === 'failed') {
+  } @else if (s.status === ScreeningStatus.FAILED) {
     <div class="state">
       <app-fit-score-badge
         variant="hero"
-        status="failed"
+        [status]="s.status"
         (retry)="retry.emit()"
       />
       <p class="state__text">
-        The resume couldn't be scored. This can happen when its text can't be
-        read or the AI service doesn't respond. Retrying usually works.
+        @if (s.failure_reason) {
+          {{ s.failure_reason }}
+        } @else {
+          The resume couldn't be scored. This can happen when its text can't be
+          read or the AI service doesn't respond. Retrying usually works.
+        }
       </p>
     </div>
   } @else {
@@ -65,7 +69,7 @@
     <div class="summary">
       <app-fit-score-badge
         variant="hero"
-        status="completed"
+        [status]="s.status"
         [score]="s.fit_score"
       />
 
@@ -123,13 +127,13 @@
             <li class="req" [class]="'is-' + m.match">
               <span class="req__status">
                 @switch (m.match) {
-                  @case ('met') {
+                  @case (MatchLevel.MET) {
                     <svg viewBox="0 0 16 16" aria-hidden="true">
                       <circle cx="8" cy="8" r="6.5" />
                       <path d="M5.2 8.2l1.9 1.9 3.7-4" />
                     </svg>
                   }
-                  @case ('partial') {
+                  @case (MatchLevel.PARTIAL) {
                     <svg viewBox="0 0 16 16" aria-hidden="true">
                       <circle cx="8" cy="8" r="6.5" />
                       <path d="M5.3 8h5.4" />

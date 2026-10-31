@@ -10,7 +10,9 @@ import {
 import { eq } from 'drizzle-orm';
 import { DB, type Database } from '../database/database.module.js';
 import { aiScreenings, applications } from '../database/schema.js';
-import { GeminiClient, GeminiError } from './gemini.client.js';
+import { ResumeTextService } from '../resumes/resume-text.service.js';
+import { GeminiClient } from './gemini.client.js';
+import { failureReason, MissingResumeTextError } from './screening-failure.js';
 import {
   buildScreeningPrompt,
   SCREENING_RESPONSE_SCHEMA,
@@ -18,14 +20,11 @@ import {
   splitRequirements,
   type ScreeningPosting,
 } from './screening-prompt.js';
+import { ScreeningQueue } from './screening-queue.js';
 import {
-  InvalidScreeningResponseError,
   parseScreeningResult,
   type ScreeningResult,
 } from './screening-result.js';
-
-/** Thrown when the resume has no text to screen yet. */
-class MissingResumeTextError extends Error {}
 
 @Injectable()
 export class AiScreeningsService {
@@ -34,13 +33,34 @@ export class AiScreeningsService {
   constructor(
     @Inject(DB) private readonly db: Database,
     private readonly gemini: GeminiClient,
+    private readonly resumeText: ResumeTextService,
+    private readonly queue: ScreeningQueue,
   ) {}
 
   /**
    * Scores the application's resume against its posting and saves the result.
    * A finished screening is returned as is unless `retry` is set.
+   * Screenings wait their turn in the queue.
    */
-  async screen(applicationId: number, retry: boolean) {
+  screen(applicationId: number, retry: boolean) {
+    if (this.queue.size > 0) {
+      this.logger.log(
+        `Screening ${applicationId} waits behind ${this.queue.size}.`,
+      );
+    }
+    return this.queue.run(() => this.process(applicationId, retry));
+  }
+
+  /** The saved screening for an application. */
+  async findOne(applicationId: number) {
+    const screening = await this.db.query.aiScreenings.findFirst({
+      where: eq(aiScreenings.application_id, applicationId),
+    });
+    if (!screening) throw new NotFoundException('AI screening not found.');
+    return screening;
+  }
+
+  private async process(applicationId: number, retry: boolean) {
     const application = await this.db.query.applications.findFirst({
       where: eq(applications.id, applicationId),
       columns: { id: true },
@@ -48,7 +68,7 @@ export class AiScreeningsService {
         posting: {
           columns: { title: true, description: true, requirements: true },
         },
-        resume: { columns: { extracted_text: true } },
+        resume: { columns: { id: true, extracted_text: true } },
         screening: true,
       },
     });
@@ -67,53 +87,45 @@ export class AiScreeningsService {
     const retry_count = previous ? previous.retry_count + 1 : 0;
 
     try {
-      const result = await this.score(
-        application.posting,
-        application.resume.extracted_text,
-      );
+      // Text missing from upload time (an old upload or a failed read) is
+      // read again here, so a retry also retries the extraction.
+      const resumeText =
+        application.resume.extracted_text ??
+        (await this.resumeText.extractStored(application.resume.id));
+      const result = await this.score(application.posting, resumeText);
       return await this.save(applicationId, {
         ...result,
         status: 'completed',
         retry_count,
+        failure_reason: null,
       });
     } catch (err) {
-      if (
-        !(err instanceof GeminiError) &&
-        !(err instanceof InvalidScreeningResponseError) &&
-        !(err instanceof MissingResumeTextError)
-      ) {
-        throw err;
-      }
-      this.logger.warn(`Screening ${applicationId} failed: ${err.message}`);
+      const failure_reason = failureReason(err);
+      if (failure_reason === null) throw err;
+      this.logger.warn(
+        `Screening ${applicationId} failed: ${(err as Error).message}`,
+      );
       await this.save(applicationId, {
         fit_score: null,
         explanation: null,
         requirement_matches: null,
         status: 'failed',
         retry_count,
+        failure_reason,
       });
       throw new UnprocessableEntityException({
         message: 'AI screening could not be completed.',
         status: 'failed',
         retry_count,
+        failure_reason,
       });
     }
-  }
-
-  /** The saved screening for an application. */
-  async findOne(applicationId: number) {
-    const screening = await this.db.query.aiScreenings.findFirst({
-      where: eq(aiScreenings.application_id, applicationId),
-    });
-    if (!screening) throw new NotFoundException('AI screening not found.');
-    return screening;
   }
 
   private async score(
     posting: ScreeningPosting,
     resumeText: string | null,
   ): Promise<ScreeningResult> {
-    // Resume text extraction (WBS 4.3.2.1) fills resumes.extracted_text.
     if (!resumeText?.trim()) {
       throw new MissingResumeTextError('The resume has no extracted text.');
     }

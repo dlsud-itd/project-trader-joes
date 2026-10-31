@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { FitTier } from '../../core/ai-screenings';
 import { Applications, fitGroup } from './applications';
 import { ApplicationRow, SAMPLE_APPLICATIONS } from './sample-applications';
 
@@ -7,9 +8,9 @@ const byName = (name: string) =>
 
 describe('fitGroup', () => {
   it('groups by fit tier, and unscored when there is no score', () => {
-    expect(fitGroup(byName('Mei-Lin Chen'))).toBe('strong');
-    expect(fitGroup(byName('Aisha Rahman'))).toBe('possible');
-    expect(fitGroup(byName('Daniel Okafor'))).toBe('weak');
+    expect(fitGroup(byName('Mei-Lin Chen'))).toBe(FitTier.STRONG);
+    expect(fitGroup(byName('Aisha Rahman'))).toBe(FitTier.POSSIBLE);
+    expect(fitGroup(byName('Daniel Okafor'))).toBe(FitTier.WEAK);
     expect(fitGroup(byName('Lucas Martin'))).toBe('unscored'); // failed
     expect(fitGroup(byName('Hana Kim'))).toBe('unscored'); // not screened
   });

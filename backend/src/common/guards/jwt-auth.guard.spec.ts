@@ -1,18 +1,30 @@
 import { ExecutionContext, UnauthorizedException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
-import type { AuthUser } from '../types/auth-user.js';
+import type { AuthUser, JwtPayload } from '../types/auth-user.js';
 import { JwtAuthGuard } from './jwt-auth.guard.js';
 
+const TEST_SECRET = 'test-secret';
+const WRONG_SECRET = 'wrong-secret';
+
+type MockRequest = {
+  headers: { authorization?: string };
+  user?: AuthUser;
+};
+
 describe('JwtAuthGuard', () => {
-  const jwt = new JwtService({ secret: 'test-secret' });
+  const jwt = new JwtService({ secret: TEST_SECRET });
   const reflector = new Reflector();
   const guard = new JwtAuthGuard(jwt, reflector);
 
+  const recruiter: JwtPayload = {
+    sub: 5,
+    email: 'a@b.com',
+    role: 'recruiter',
+  };
+
   function contextFor(authorization?: string) {
-    const request: { headers: { authorization?: string }; user?: AuthUser } = {
-      headers: { authorization },
-    };
+    const request: MockRequest = { headers: { authorization } };
     const context = {
       switchToHttp: () => ({ getRequest: () => request }),
       getHandler: () => () => undefined,
@@ -46,24 +58,20 @@ describe('JwtAuthGuard', () => {
 
   it('accepts a valid token and attaches the user', async () => {
     markPublic(false);
-    const token = await jwt.signAsync({
-      sub: 5,
-      email: 'a@b.com',
-      role: 'recruiter',
-    });
+    const token = await jwt.signAsync(recruiter);
     const { context, request } = contextFor(`Bearer ${token}`);
 
     await expect(guard.canActivate(context)).resolves.toBe(true);
     expect(request.user).toEqual({
-      id: 5,
-      email: 'a@b.com',
-      role: 'recruiter',
+      id: recruiter.sub,
+      email: recruiter.email,
+      role: recruiter.role,
     });
   });
 
   it('rejects a fake token', async () => {
     markPublic(false);
-    const forged = await new JwtService({ secret: 'wrong-secret' }).signAsync({
+    const forged = await new JwtService({ secret: WRONG_SECRET }).signAsync({
       sub: 1,
       email: 'evil@b.com',
       role: 'manager',

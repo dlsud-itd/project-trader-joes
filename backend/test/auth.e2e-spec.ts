@@ -10,6 +10,17 @@ import { HttpExceptionFilter } from '../src/common/filters/http-exception.filter
  * Seed it with `npm run db:seed`.
  * Run with: npm run test:e2e
  */
+type Credentials = { email: string; password: string };
+
+const MANAGER: Credentials = {
+  email: 'manager@talentflow.dev',
+  password: 'Manager123!',
+};
+const RECRUITER: Credentials = {
+  email: 'recruiter@talentflow.dev',
+  password: 'Recruiter123!',
+};
+
 describe('Auth (e2e)', () => {
   let app: INestApplication;
 
@@ -30,10 +41,8 @@ describe('Auth (e2e)', () => {
     await app.close();
   });
 
-  const login = (email: string, password: string) =>
-    request(app.getHttpServer())
-      .post('/api/auth/login')
-      .send({ email, password });
+  const login = (credentials: Credentials) =>
+    request(app.getHttpServer()).post('/api/auth/login').send(credentials);
 
   it('GET /api/health reports the database is up', () =>
     request(app.getHttpServer())
@@ -42,15 +51,13 @@ describe('Auth (e2e)', () => {
       .expect((res) => expect(res.body.database).toBe('up')));
 
   it('logs in with valid credentials', async () => {
-    const res = await login('manager@talentflow.dev', 'Manager123!').expect(
-      200,
-    );
+    const res = await login(MANAGER).expect(200);
     expect(res.body.token).toEqual(expect.any(String));
     expect(res.body.user.role).toBe('manager');
   });
 
   it('rejects invalid credentials with 401', async () => {
-    const res = await login('manager@talentflow.dev', 'wrong').expect(401);
+    const res = await login({ ...MANAGER, password: 'wrong' }).expect(401);
     expect(res.body).toEqual({ error: 'Invalid email or password' });
   });
 
@@ -58,7 +65,7 @@ describe('Auth (e2e)', () => {
     request(app.getHttpServer()).get('/api/auth/me').expect(401));
 
   it('lets a recruiter read /api/auth/me but not register users', async () => {
-    const { body } = await login('recruiter@talentflow.dev', 'Recruiter123!');
+    const { body } = await login(RECRUITER);
     const auth = { Authorization: `Bearer ${body.token}` };
 
     await request(app.getHttpServer())
@@ -79,7 +86,7 @@ describe('Auth (e2e)', () => {
   });
 
   it('validates the register body for managers', async () => {
-    const { body } = await login('manager@talentflow.dev', 'Manager123!');
+    const { body } = await login(MANAGER);
     const res = await request(app.getHttpServer())
       .post('/api/auth/register')
       .set({ Authorization: `Bearer ${body.token}` })
@@ -89,7 +96,7 @@ describe('Auth (e2e)', () => {
   });
 
   it('registers a user and rejects duplicate emails', async () => {
-    const { body } = await login('manager@talentflow.dev', 'Manager123!');
+    const { body } = await login(MANAGER);
     const auth = { Authorization: `Bearer ${body.token}` };
     const uniqueEmail = `staff_${Date.now()}@talentflow.dev`;
     const payload = {

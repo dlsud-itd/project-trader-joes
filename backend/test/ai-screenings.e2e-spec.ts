@@ -6,7 +6,9 @@ import request from 'supertest';
 import {
   GeminiClient,
   GeminiError,
+  GeminiFailure,
 } from '../src/ai-screenings/gemini.client.js';
+import { FAILURE_REASONS } from '../src/ai-screenings/screening-failure.js';
 import { AppModule } from '../src/app.module.js';
 import { HttpExceptionFilter } from '../src/common/filters/http-exception.filter.js';
 import { DB, type Database } from '../src/database/database.module.js';
@@ -16,6 +18,7 @@ import {
   jobPostings,
   resumes,
 } from '../src/database/schema.js';
+import { buildPdf } from './resume-files.js';
 
 /**
  * Runs against the database in backend/.env (seeded sample accounts required).
@@ -45,9 +48,14 @@ describe('AI screenings (e2e)', () => {
     explanation: 'Strong JavaScript; some SQL; no Git.',
   });
 
-  /** An application, with a resume unless `resume` is false. */
+  /**
+   * An application, with a resume unless `resume` is false. `file` is the
+   * stored file, which is read when `text` is null.
+   */
   const apply = async (
-    resume: { text: string | null } | false = { text: 'Juan: JavaScript.' },
+    resume: { text: string | null; file?: Buffer } | false = {
+      text: 'Juan: JavaScript.',
+    },
   ) => {
     const [created] = await db
       .insert(applications)
@@ -59,8 +67,8 @@ describe('AI screenings (e2e)', () => {
         file_url: '/api/resumes/0/file',
         file_name: 'cv.pdf',
         mime_type: 'application/pdf',
-        size_bytes: 8,
-        data: Buffer.from('%PDF-1.7'),
+        size_bytes: resume.file?.length ?? 8,
+        data: resume.file ?? Buffer.from('%PDF-1.7'),
         extracted_text: resume.text,
       });
     }
@@ -169,7 +177,7 @@ describe('AI screenings (e2e)', () => {
 
   it('saves a failed screening and answers 422 when Gemini fails', async () => {
     gemini.generateJson.mockImplementationOnce(async () => {
-      throw new GeminiError('quota');
+      throw new GeminiError('503 after retries', GeminiFailure.BUSY);
     });
     const id = await apply();
 
@@ -179,24 +187,41 @@ describe('AI screenings (e2e)', () => {
       error: 'AI screening could not be completed.',
       status: 'failed',
       retry_count: 0,
+      failure_reason: FAILURE_REASONS[GeminiFailure.BUSY],
     });
     const [row] = await db
       .select()
       .from(aiScreenings)
       .where(eq(aiScreenings.application_id, id));
-    expect(row).toMatchObject({ status: 'failed', fit_score: null });
+    expect(row).toMatchObject({
+      status: 'failed',
+      fit_score: null,
+      failure_reason: FAILURE_REASONS[GeminiFailure.BUSY],
+    });
+  });
+
+  it('says when the daily Gemini limit is used up', async () => {
+    gemini.generateJson.mockImplementationOnce(async () => {
+      throw new GeminiError('quota', GeminiFailure.DAILY_LIMIT);
+    });
+    const id = await apply();
+    const { body } = await screen(id).expect(422);
+    expect(body.failure_reason).toMatch(/Try again tomorrow/);
   });
 
   it('treats an unusable Gemini reply as a failed screening', async () => {
     gemini.generateJson.mockResolvedValue('The candidate looks great!');
     const id = await apply();
     const { body } = await screen(id).expect(422);
-    expect(body.status).toBe('failed');
+    expect(body).toMatchObject({
+      status: 'failed',
+      failure_reason: FAILURE_REASONS.invalidAnswer,
+    });
   });
 
   it('asks for retry after a failure, then retries and counts it', async () => {
     gemini.generateJson.mockImplementationOnce(async () => {
-      throw new GeminiError('timeout');
+      throw new GeminiError('timeout', GeminiFailure.BUSY);
     });
     const id = await apply();
     await screen(id).expect(422);
@@ -210,13 +235,47 @@ describe('AI screenings (e2e)', () => {
       status: 'completed',
       fit_score: 50,
       retry_count: 1,
+      failure_reason: null,
     });
   });
 
-  it('fails without calling Gemini when the resume has no text yet', async () => {
+  it('screens the same application once when asked twice at once', async () => {
+    gemini.generateJson.mockResolvedValue(goodReply);
+    const id = await apply();
+
+    const [first, second] = await Promise.all([screen(id), screen(id)]);
+
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(200);
+    expect(second.body.screening.id).toBe(first.body.screening.id);
+    expect(gemini.generateJson).toHaveBeenCalledTimes(1);
+  });
+
+  it('reads the text from the stored file when it is missing', async () => {
+    gemini.generateJson.mockResolvedValue(goodReply);
+    const file = buildPdf(['Ana Reyes', 'SKILLS: JavaScript, SQL']);
+    const id = await apply({ text: null, file });
+
+    await screen(id).expect(200);
+
+    const [sent] = gemini.generateJson.mock.calls[0] as unknown as [
+      { prompt: string },
+    ];
+    expect(sent.prompt).toContain('Ana Reyes\nSKILLS: JavaScript, SQL');
+    const [resume] = await db
+      .select({ extracted_text: resumes.extracted_text })
+      .from(resumes)
+      .where(eq(resumes.application_id, id));
+    expect(resume.extracted_text).toBe('Ana Reyes\nSKILLS: JavaScript, SQL');
+  });
+
+  it('skips Gemini when the resume has no readable text', async () => {
     const id = await apply({ text: null });
     const { body } = await screen(id).expect(422);
-    expect(body.status).toBe('failed');
+    expect(body).toMatchObject({
+      status: 'failed',
+      failure_reason: FAILURE_REASONS.missingText,
+    });
     expect(gemini.generateJson).not.toHaveBeenCalled();
   });
 

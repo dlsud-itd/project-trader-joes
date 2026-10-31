@@ -150,8 +150,8 @@ const bytea = customType<{ data: Buffer; driverData: Buffer }>({
 
 /**
  * The uploaded resume file. The bytes live in the database because Render's
- * disk is wiped on every deploy. `extracted_text` and `parsed_data_json` are
- * filled in by AI screening (Sprint 3).
+ * disk is wiped on every deploy. `extracted_text` is read from the file on
+ * upload, or before screening if that failed; `parsed_data_json` is unused.
  */
 export const resumes = pgTable('resumes', {
   id: serial('id').primaryKey(),
@@ -207,8 +207,9 @@ export type Resume = typeof resumes.$inferSelect;
 /* ---------------------------------------------------------------- Sprint 3 */
 
 /**
- * `completed` has a fit score; `failed` means Gemini could not be reached or
- * returned something unusable, and the screening can be retried.
+ * `completed` has a fit score; `failed` means the resume had no readable
+ * text, or Gemini could not be reached or returned something unusable.
+ * `failure_reason` says which, and the screening can be retried.
  */
 export const screeningStatusEnum = pgEnum('screening_status', [
   'completed',
@@ -238,6 +239,8 @@ export const aiScreenings = pgTable('ai_screenings', {
   /** One entry per posting requirement, for the fit score breakdown card. */
   requirement_matches: jsonb('requirement_matches').$type<RequirementMatch[]>(),
   status: screeningStatusEnum('status').notNull(),
+  /** Why the last screening failed, for the recruiter; null once it passes. */
+  failure_reason: text('failure_reason'),
   retry_count: integer('retry_count').notNull().default(0),
   screened_at: timestamp('screened_at', { withTimezone: true })
     .notNull()

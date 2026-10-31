@@ -176,7 +176,7 @@ describe('Apply page', () => {
     http
       .expectOne(`${API}/resumes`)
       .flush(
-        { error: 'Upload a PDF or Word (.docx) file.' },
+        { error: 'Upload a PDF file.' },
         { status: 400, statusText: 'Bad' },
       );
     await settle();

@@ -1,4 +1,9 @@
-import { AiScreening, RequirementMatch } from '../../core/ai-screenings';
+import {
+  AiScreening,
+  RequirementMatch,
+  RequirementMatchLevel,
+  ScreeningStatus,
+} from '../../core/ai-screenings';
 
 /**
  * Sample applicants for the Applications page. The API has no
@@ -24,9 +29,11 @@ export type ApplicationRow = {
 const FRONTEND = 'Frontend Developer Intern';
 const QA = 'QA Analyst';
 
+const { MET, PARTIAL, MISSING } = RequirementMatchLevel;
+
 const m = (
   requirement: string,
-  match: RequirementMatch['match'],
+  match: RequirementMatchLevel,
   evidence: string,
 ): RequirementMatch => ({ requirement, match, evidence });
 
@@ -42,7 +49,8 @@ function screening(
     fit_score,
     explanation,
     requirement_matches,
-    status: 'completed',
+    status: ScreeningStatus.COMPLETED,
+    failure_reason: null,
     retry_count: 0,
     screened_at: '2026-10-30T09:20:00Z',
   };
@@ -55,7 +63,8 @@ function failed(application_id: number): AiScreening {
     fit_score: null,
     explanation: null,
     requirement_matches: null,
-    status: 'failed',
+    status: ScreeningStatus.FAILED,
+    failure_reason: 'The AI service took too long to answer. Try again.',
     retry_count: 0,
     screened_at: '2026-10-30T09:24:00Z',
   };
@@ -76,27 +85,27 @@ export const SAMPLE_APPLICATIONS: ApplicationRow[] = [
       [
         m(
           'Angular or React in a real project',
-          'met',
+          MET,
           'Built the student portal at Acme Labs in Angular 20.',
         ),
         m(
           'TypeScript',
-          'met',
+          MET,
           'TypeScript across both internships and the capstone.',
         ),
         m(
           'Git and pull requests',
-          'met',
+          MET,
           'Reviewed and merged PRs as part of a four-person team.',
         ),
         m(
           'Responsive CSS',
-          'met',
+          MET,
           'Mobile-first SCSS for the capstone dashboard.',
         ),
         m(
           'Unit testing',
-          'partial',
+          PARTIAL,
           'Wrote a few Jest tests for form validation.',
         ),
       ],
@@ -116,27 +125,23 @@ export const SAMPLE_APPLICATIONS: ApplicationRow[] = [
       [
         m(
           'Angular or React in a real project',
-          'met',
+          MET,
           'Freelance React storefront for a local bakery.',
         ),
         m(
           'TypeScript',
-          'met',
+          MET,
           'Rewrote the storefront from JavaScript to TypeScript.',
         ),
         m(
           'Git and pull requests',
-          'met',
+          MET,
           'Maintains two open-source repos with outside contributors.',
         ),
-        m(
-          'Responsive CSS',
-          'partial',
-          'Mentions mobile layouts without detail.',
-        ),
+        m('Responsive CSS', PARTIAL, 'Mentions mobile layouts without detail.'),
         m(
           'Unit testing',
-          'met',
+          MET,
           'Vitest suite with 80% coverage on the storefront.',
         ),
       ],
@@ -156,17 +161,17 @@ export const SAMPLE_APPLICATIONS: ApplicationRow[] = [
       [
         m(
           'Angular or React in a real project',
-          'partial',
+          PARTIAL,
           'React only in a class project.',
         ),
-        m('TypeScript', 'met', 'Node and TypeScript APIs during internship.'),
+        m('TypeScript', MET, 'Node and TypeScript APIs during internship.'),
         m(
           'Git and pull requests',
-          'met',
+          MET,
           'Used GitHub flow with code review at work.',
         ),
-        m('Responsive CSS', 'met', 'Built a responsive portfolio site.'),
-        m('Unit testing', 'missing', 'No testing tools or test work listed.'),
+        m('Responsive CSS', MET, 'Built a responsive portfolio site.'),
+        m('Unit testing', MISSING, 'No testing tools or test work listed.'),
       ],
     ),
   },
@@ -185,21 +190,21 @@ export const SAMPLE_APPLICATIONS: ApplicationRow[] = [
       [
         m(
           'Angular or React in a real project',
-          'met',
+          MET,
           'Personal React budgeting app, deployed on Vercel.',
         ),
-        m('TypeScript', 'partial', 'Lists TypeScript under skills only.'),
+        m('TypeScript', PARTIAL, 'Lists TypeScript under skills only.'),
         m(
           'Git and pull requests',
-          'partial',
+          PARTIAL,
           'GitHub profile linked; no team work described.',
         ),
         m(
           'Responsive CSS',
-          'met',
+          MET,
           'Hand-built responsive layouts with CSS grid.',
         ),
-        m('Unit testing', 'missing', 'No testing tools or test work listed.'),
+        m('Unit testing', MISSING, 'No testing tools or test work listed.'),
       ],
     ),
   },
@@ -218,23 +223,23 @@ export const SAMPLE_APPLICATIONS: ApplicationRow[] = [
       [
         m(
           'Angular or React in a real project',
-          'partial',
+          PARTIAL,
           'React prototypes for a design class.',
         ),
-        m('TypeScript', 'missing', 'Not mentioned.'),
+        m('TypeScript', MISSING, 'Not mentioned.'),
         m(
           'Git and pull requests',
-          'partial',
+          PARTIAL,
           'Shared Figma and code files over GitHub.',
         ),
         m(
           'Responsive CSS',
-          'met',
+          MET,
           'Responsive landing pages for two student orgs.',
         ),
         m(
           'Unit testing',
-          'missing',
+          MISSING,
           'Lists usability testing only, not code tests.',
         ),
       ],
@@ -254,20 +259,20 @@ export const SAMPLE_APPLICATIONS: ApplicationRow[] = [
       [
         m(
           'Manual test cases and bug reports',
-          'met',
+          MET,
           'Wrote 120+ test cases during OJT at a fintech startup.',
         ),
         m(
           'Test automation (Playwright or Cypress)',
-          'partial',
+          PARTIAL,
           'Cypress in a class project only.',
         ),
         m(
           'SQL for checking data',
-          'met',
+          MET,
           'Used SQL to verify transaction records.',
         ),
-        m('CI pipelines', 'missing', 'Not mentioned.'),
+        m('CI pipelines', MISSING, 'Not mentioned.'),
       ],
     ),
   },
@@ -285,20 +290,12 @@ export const SAMPLE_APPLICATIONS: ApplicationRow[] = [
       [
         m(
           'Manual test cases and bug reports',
-          'met',
+          MET,
           'Ran QA for a student org app before launch.',
         ),
-        m(
-          'Test automation (Playwright or Cypress)',
-          'missing',
-          'Not mentioned.',
-        ),
-        m(
-          'SQL for checking data',
-          'partial',
-          'Database course; no applied use.',
-        ),
-        m('CI pipelines', 'partial', 'Set up GitHub Actions for a class repo.'),
+        m('Test automation (Playwright or Cypress)', MISSING, 'Not mentioned.'),
+        m('SQL for checking data', PARTIAL, 'Database course; no applied use.'),
+        m('CI pipelines', PARTIAL, 'Set up GitHub Actions for a class repo.'),
       ],
     ),
   },
@@ -316,16 +313,12 @@ export const SAMPLE_APPLICATIONS: ApplicationRow[] = [
       [
         m(
           'Manual test cases and bug reports',
-          'partial',
+          PARTIAL,
           'Logged customer-reported issues in a ticket system.',
         ),
-        m(
-          'Test automation (Playwright or Cypress)',
-          'missing',
-          'Not mentioned.',
-        ),
-        m('SQL for checking data', 'partial', 'Basic Excel reporting; no SQL.'),
-        m('CI pipelines', 'missing', 'Not mentioned.'),
+        m('Test automation (Playwright or Cypress)', MISSING, 'Not mentioned.'),
+        m('SQL for checking data', PARTIAL, 'Basic Excel reporting; no SQL.'),
+        m('CI pipelines', MISSING, 'Not mentioned.'),
       ],
     ),
   },

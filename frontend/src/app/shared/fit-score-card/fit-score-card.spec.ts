@@ -1,10 +1,15 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { AiScreening, RequirementMatch } from '../../core/ai-screenings';
+import {
+  AiScreening,
+  RequirementMatch,
+  RequirementMatchLevel,
+  ScreeningStatus,
+} from '../../core/ai-screenings';
 import { FitScoreCard } from './fit-score-card';
 
 const match = (
   requirement: string,
-  level: RequirementMatch['match'],
+  level: RequirementMatchLevel,
   evidence = '',
 ): RequirementMatch => ({ requirement, match: level, evidence });
 
@@ -14,12 +19,25 @@ const completed = (overrides: Partial<AiScreening> = {}): AiScreening => ({
   fit_score: 75,
   explanation: 'Solid Angular and TypeScript work; no testing experience.',
   requirement_matches: [
-    match('Angular', 'met', 'Built a capstone portal in Angular 20.'),
-    match('TypeScript', 'met', 'Three years of TypeScript.'),
-    match('Git', 'partial', 'Used GitHub for coursework.'),
-    match('Unit testing', 'missing', 'No testing tools listed.'),
+    match(
+      'Angular',
+      RequirementMatchLevel.MET,
+      'Built a capstone portal in Angular 20.',
+    ),
+    match(
+      'TypeScript',
+      RequirementMatchLevel.MET,
+      'Three years of TypeScript.',
+    ),
+    match('Git', RequirementMatchLevel.PARTIAL, 'Used GitHub for coursework.'),
+    match(
+      'Unit testing',
+      RequirementMatchLevel.MISSING,
+      'No testing tools listed.',
+    ),
   ],
-  status: 'completed',
+  status: ScreeningStatus.COMPLETED,
+  failure_reason: null,
   retry_count: 0,
   screened_at: '2026-10-31T04:00:00Z',
   ...overrides,
@@ -80,7 +98,10 @@ describe('FitScoreCard', () => {
     set({
       screening: completed({
         fit_score: 100,
-        requirement_matches: [match('A', 'met'), match('B', 'met')],
+        requirement_matches: [
+          match('A', RequirementMatchLevel.MET),
+          match('B', RequirementMatchLevel.MET),
+        ],
       }),
     });
     const segments = el().querySelectorAll('.bar__seg');
@@ -89,7 +110,9 @@ describe('FitScoreCard', () => {
   });
 
   it('collapses long requirement lists', () => {
-    const many = Array.from({ length: 8 }, (_, i) => match(`Req ${i}`, 'met'));
+    const many = Array.from({ length: 8 }, (_, i) =>
+      match(`Req ${i}`, RequirementMatchLevel.MET),
+    );
     set({ screening: completed({ requirement_matches: many }) });
     expect(el().querySelectorAll('.req').length).toBe(5);
 
@@ -120,7 +143,7 @@ describe('FitScoreCard', () => {
     fixture.componentInstance.retry.subscribe(() => retries++);
     set({
       screening: completed({
-        status: 'failed',
+        status: ScreeningStatus.FAILED,
         fit_score: null,
         explanation: null,
         requirement_matches: null,
@@ -130,6 +153,20 @@ describe('FitScoreCard', () => {
     expect(el().querySelector('.reqs')).toBeNull();
     button('Retry')?.click();
     expect(retries).toBe(1);
+  });
+
+  it('shows why a screening failed when the API says', () => {
+    set({
+      screening: completed({
+        status: ScreeningStatus.FAILED,
+        fit_score: null,
+        explanation: null,
+        requirement_matches: null,
+        failure_reason: 'The AI service is busy right now. Try again later.',
+      }),
+    });
+    expect(text()).toContain('The AI service is busy right now.');
+    expect(text()).not.toContain("couldn't be scored");
   });
 
   it('shows progress while scoring', () => {

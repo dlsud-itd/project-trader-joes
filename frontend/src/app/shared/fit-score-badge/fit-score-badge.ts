@@ -42,9 +42,10 @@ export class FitScoreBadge {
 
   protected readonly state = computed<BadgeState>(() => {
     if (this.busy()) return 'scoring';
-    if (this.status() === 'failed') return 'failed';
+    if (this.status() === ScreeningStatus.FAILED) return 'failed';
     const score = this.score();
-    if (this.status() === 'completed' && score != null) return 'scored';
+    const isCompleted = this.status() === ScreeningStatus.COMPLETED;
+    if (isCompleted && score != null) return 'scored';
     return 'none';
   });
 
