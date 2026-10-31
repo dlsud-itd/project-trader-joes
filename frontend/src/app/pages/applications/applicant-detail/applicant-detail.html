@@ -1,0 +1,34 @@
+@let a = application();
+
+<div class="profile">
+  <span class="avatar" aria-hidden="true">{{ initials() }}</span>
+  <div class="profile__text">
+    <h2>{{ a.full_name }}</h2>
+    <p>{{ a.email }}</p>
+  </div>
+  <dl class="facts">
+    <div>
+      <dt>Posting</dt>
+      <dd>{{ a.posting_title }}</dd>
+    </div>
+    <div>
+      <dt>Stage</dt>
+      <dd>
+        <span class="tf-stage" [class]="'tf-stage--' + a.kanban_stage">{{
+          a.kanban_stage
+        }}</span>
+      </dd>
+    </div>
+    <div>
+      <dt>Applied</dt>
+      <dd>{{ a.submitted_at | date: 'MMM d, y' }}</dd>
+    </div>
+  </dl>
+</div>
+
+<app-fit-score-card
+  [screening]="a.screening"
+  [busy]="busy()"
+  (run)="score.emit()"
+  (retry)="score.emit()"
+/>
