@@ -8,7 +8,9 @@ function contextFor(role?: UserRole): ExecutionContext {
     getHandler: () => () => undefined,
     getClass: () => class {},
     switchToHttp: () => ({
-      getRequest: () => ({ user: role ? { id: 1, email: 'a@b.c', role } : undefined }),
+      getRequest: () => ({
+        user: role ? { id: 1, email: 'a@b.c', role } : undefined,
+      }),
     }),
   } as unknown as ExecutionContext;
 }
@@ -31,7 +33,9 @@ describe('RolesGuard', () => {
 
   it('blocks a user whose role is not listed', () => {
     vi.spyOn(reflector, 'getAllAndOverride').mockReturnValue(['manager']);
-    expect(() => guard.canActivate(contextFor('recruiter'))).toThrow(ForbiddenException);
+    expect(() => guard.canActivate(contextFor('recruiter'))).toThrow(
+      ForbiddenException,
+    );
   });
 
   it('blocks a request with no user when roles are required', () => {

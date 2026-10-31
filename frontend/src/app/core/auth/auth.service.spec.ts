@@ -6,7 +6,7 @@ import {
 } from '@angular/common/http/testing';
 import { provideRouter, Router } from '@angular/router';
 import { environment } from '../../../environments/environment';
-import { User } from './auth.models';
+import { User, UserRole } from './auth.models';
 import { AuthService } from './auth.service';
 
 const LOGIN_URL = `${environment.apiUrl}/auth/login`;
@@ -23,8 +23,8 @@ const manager: User = {
   email: 'manager@talentflow.dev',
   first_name: 'Maria',
   last_name: 'Santos',
-  role: 'manager',
-  created_at: '2026-10-16T00:00:00Z'
+  role: UserRole.MANAGER,
+  created_at: '2026-10-16T00:00:00Z',
 };
 
 describe('AuthService', () => {
@@ -47,29 +47,25 @@ describe('AuthService', () => {
     http = TestBed.inject(HttpTestingController);
   });
 
-  async function signIn(): Promise<void> {
-    const signingIn = auth.login({
-      email: manager.email,
-      password: VALID_PASSWORD,
-    });
-    http.expectOne(LOGIN_URL).flush({ token: FAKE_TOKEN, user: manager });
-    await signingIn;
+  function signIn(user: User = manager): void {
+    auth.login({ email: user.email, password: VALID_PASSWORD }).subscribe();
+    http.expectOne(LOGIN_URL).flush({ token: FAKE_TOKEN, user });
   }
 
-  it('saves the token after login', async () => {
-    await signIn();
+  it('saves the token after login', () => {
+    signIn();
 
     expect(auth.token()).toBe(FAKE_TOKEN);
   });
 
-  it('keeps the token in localStorage after login', async () => {
-    await signIn();
+  it('keeps the token in localStorage after login', () => {
+    signIn();
 
     expect(localStorage.getItem(TOKEN_KEY)).toBe(FAKE_TOKEN);
   });
 
-  it('clears the token on logout', async () => {
-    await signIn();
+  it('clears the token on logout', () => {
+    signIn();
 
     auth.logout();
 
@@ -77,23 +73,18 @@ describe('AuthService', () => {
     expect(localStorage.getItem(TOKEN_KEY)).toBeNull();
   });
 
-  it('does not save a token when login fails', async () => {
-    const signingIn = auth.login({
-      email: manager.email,
-      password: WRONG_PASSWORD,
-    });
+  it('does not save a token when login fails', () => {
+    auth
+      .login({ email: manager.email, password: WRONG_PASSWORD })
+      .subscribe({ error: () => undefined });
     http.expectOne(LOGIN_URL).flush(LOGIN_ERROR, UNAUTHORIZED);
-    await signingIn.catch(() => undefined);
 
     expect(auth.token()).toBeFalsy();
     expect(localStorage.getItem(TOKEN_KEY)).toBeNull();
   });
 
-  it('sends a signed-in applicant to /careers on logout, not the staff login page', async () => {
-    const applicant: User = { ...manager, role: 'applicant' };
-    const signingIn = auth.login({ email: applicant.email, password: VALID_PASSWORD });
-    http.expectOne(LOGIN_URL).flush({ token: FAKE_TOKEN, user: applicant });
-    await signingIn;
+  it('sends a signed-in applicant to /careers on logout', () => {
+    signIn({ ...manager, role: UserRole.APPLICANT });
 
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigate');
     auth.logout();
@@ -101,19 +92,20 @@ describe('AuthService', () => {
     expect(navigate).toHaveBeenCalledWith(['/careers'], {});
   });
 
-  it('registers an applicant without a role in the request body', async () => {
+  it('registers an applicant without a role in the request body', () => {
     const body = {
       email: 'ana@example.com',
       password: 'Password123',
       first_name: 'Ana',
       last_name: 'Cruz',
     };
-    const registering = auth.registerApplicant(body);
+    auth.registerApplicant(body).subscribe();
 
     const req = http.expectOne(REGISTER_APPLICANT_URL);
     expect(req.request.body).toEqual(body);
-    req.flush({ message: 'Account created successfully.', user: { ...manager, role: 'applicant' } });
-
-    await registering;
+    req.flush({
+      message: 'Account created successfully.',
+      user: { ...manager, role: UserRole.APPLICANT },
+    });
   });
 });

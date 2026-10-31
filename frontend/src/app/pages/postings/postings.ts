@@ -15,6 +15,7 @@ import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { apiErrorMessage } from '../../core/api/api-error';
+import { UserRole } from '../../core/auth/auth.models';
 import { AuthService } from '../../core/auth/auth.service';
 import {
   JobPosting,
@@ -58,7 +59,9 @@ export class Postings implements OnInit {
 
   protected readonly statusLabels = STATUS_LABELS;
   protected readonly status = JobPostingStatus;
-  protected readonly canManage = computed(() => this.auth.hasRole('manager'));
+  protected readonly canManage = computed(() =>
+    this.auth.hasRole(UserRole.MANAGER),
+  );
   protected readonly isLoading = signal(true);
   protected readonly loadError = signal<string | null>(null);
   protected readonly actionError = signal<string | null>(null);

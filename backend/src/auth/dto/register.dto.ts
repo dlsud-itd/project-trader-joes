@@ -1,9 +1,19 @@
-import { IsEmail, IsIn, IsString, Matches, MaxLength, MinLength } from 'class-validator';
+import {
+  IsEmail,
+  IsIn,
+  IsString,
+  Matches,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 import { STAFF_ROLES } from '../../database/schema.js';
 
 type StaffRole = (typeof STAFF_ROLES)[number];
 
-/** Creates a manager or recruiter account. Applicants use RegisterApplicantDto instead. */
+/**
+ * Creates a manager or recruiter account. Applicants use
+ * RegisterApplicantDto instead.
+ */
 export class RegisterDto {
   @IsEmail({}, { message: 'Enter a valid email address.' })
   email: string;

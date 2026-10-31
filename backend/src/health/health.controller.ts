@@ -1,4 +1,9 @@
-import { Controller, Get, Inject, ServiceUnavailableException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Inject,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { Pool } from 'pg';
 import { Public } from '../common/decorators/public.decorator.js';
@@ -9,7 +14,10 @@ import { PG_POOL } from '../database/database.module.js';
 export class HealthController {
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
 
-  /** GET /api/health — used by the frontend status badge and the host's health check. */
+  /**
+   * GET /api/health — used by the frontend status badge and the host's
+   * health check.
+   */
   @Public()
   @Get()
   async check() {

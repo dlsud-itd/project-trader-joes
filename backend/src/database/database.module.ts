@@ -10,7 +10,8 @@ export const PG_POOL = Symbol('PG_POOL');
 export type Database = NodePgDatabase<typeof schema>;
 
 export function createPool(connectionString: string): Pool {
-  // Hosted Postgres (Neon, Render) requires SSL; local Postgres usually does not.
+  // Hosted Postgres (Neon, Render) requires SSL; local Postgres usually does
+  // not.
   const isLocal = /localhost|127\.0\.0\.1/.test(connectionString);
   return new Pool({
     connectionString,

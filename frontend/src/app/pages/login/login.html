@@ -1,12 +1,16 @@
 <main class="login">
   <section class="brand" aria-hidden="true">
     <div class="brand__logo">
-<img class="logo__mark" src="logo.svg" alt="" width="30" height="30" />      <span>TalentFlow</span>
+      <img class="logo__mark" src="logo.svg" alt="" width="30" height="30" />
+      <span>TalentFlow</span>
     </div>
 
     <div class="brand__copy">
       <h1>Screen applicants faster. Decide as a team.</h1>
-      <p>AI fit scores, a shared pipeline, and notes your whole hiring team can see.</p>
+      <p>
+        AI fit scores, a shared pipeline, and notes your whole hiring team can
+        see.
+      </p>
     </div>
 
     <div class="pipeline">
@@ -29,13 +33,13 @@
         <p>For recruitment managers and recruiters.</p>
       </div>
 
-      @if (reason() === 'expired') {
+      @if (reason() === LogoutReason.EXPIRED) {
         <div class="tf-alert tf-alert--info" role="status">
           Your session expired. Sign in again to continue.
         </div>
       }
 
-      @if (error(); as message) {
+      @if (errorMessage(); as message) {
         <div class="tf-alert tf-alert--error" role="alert">{{ message }}</div>
       }
 
@@ -47,10 +51,10 @@
           autocomplete="email"
           formControlName="email"
           placeholder="you@company.com"
-          [class.is-invalid]="showError('email')"
-          [attr.aria-invalid]="showError('email')"
+          [class.is-invalid]="shouldShowError('email')"
+          [attr.aria-invalid]="shouldShowError('email')"
         />
-        @if (showError('email')) {
+        @if (shouldShowError('email')) {
           <span class="tf-error">Enter a valid email address.</span>
         }
       </div>
@@ -60,28 +64,34 @@
         <div class="password">
           <input
             id="password"
-            [type]="showPassword() ? 'text' : 'password'"
+            [type]="isPasswordVisible() ? 'text' : 'password'"
             autocomplete="current-password"
             formControlName="password"
-            [class.is-invalid]="showError('password')"
-            [attr.aria-invalid]="showError('password')"
+            [class.is-invalid]="shouldShowError('password')"
+            [attr.aria-invalid]="shouldShowError('password')"
           />
           <button
             type="button"
             class="password__toggle"
-            (click)="showPassword.set(!showPassword())"
-            [attr.aria-label]="showPassword() ? 'Hide password' : 'Show password'"
+            (click)="isPasswordVisible.set(!isPasswordVisible())"
+            [attr.aria-label]="
+              isPasswordVisible() ? 'Hide password' : 'Show password'
+            "
           >
-            {{ showPassword() ? 'Hide' : 'Show' }}
+            {{ isPasswordVisible() ? 'Hide' : 'Show' }}
           </button>
         </div>
-        @if (showError('password')) {
+        @if (shouldShowError('password')) {
           <span class="tf-error">Enter your password.</span>
         }
       </div>
 
-      <button class="tf-btn tf-btn--primary form__submit" type="submit" [disabled]="submitting()">
-        @if (submitting()) {
+      <button
+        class="tf-btn tf-btn--primary form__submit"
+        type="submit"
+        [disabled]="isSubmitting()"
+      >
+        @if (isSubmitting()) {
           <span class="tf-spinner" aria-hidden="true"></span>
           Signing in…
         } @else {
@@ -90,9 +100,9 @@
       </button>
 
       <p class="form__note">Accounts are created by a recruitment manager.</p>
-      <p class="form__note">Looking for a job? <a routerLink="/careers">See open roles</a>
+      <p class="form__note">
+        Looking for a job? <a routerLink="/careers">See open roles</a>
       </p>
-
     </form>
   </section>
 </main>

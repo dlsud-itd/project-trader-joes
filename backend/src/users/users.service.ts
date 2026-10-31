@@ -1,13 +1,21 @@
-
-import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import bcrypt from 'bcryptjs';
-import { eq, inArray } from 'drizzle-orm';
+import { asc, eq, inArray } from 'drizzle-orm';
 import { DB, type Database } from '../database/database.module.js';
-import { STAFF_ROLES, type User, type UserRole, users } from '../database/schema.js';
+import {
+  STAFF_ROLES,
+  type User,
+  type UserRole,
+  users,
+} from '../database/schema.js';
+import { SALT_ROUNDS } from './users.constants.js';
 
 export type PublicUser = Omit<User, 'password_hash'>;
-
-const SALT_ROUNDS = 10;
 
 @Injectable()
 export class UsersService {
@@ -25,18 +33,23 @@ export class UsersService {
   }
 
   async findById(id: number): Promise<PublicUser> {
-    const user = await this.db.query.users.findFirst({ where: eq(users.id, id) });
+    const user = await this.db.query.users.findFirst({
+      where: eq(users.id, id),
+    });
     if (!user) throw new NotFoundException('User not found.');
     return UsersService.toPublic(user);
   }
 
-  /** Every staff account (managers and recruiters), sorted by last name, without password hashes. */
+  /**
+   * Every staff account (managers and recruiters), sorted by last name,
+   * without password hashes.
+   */
   async findAll(): Promise<PublicUser[]> {
     const rows = await this.db.query.users.findMany({
       where: inArray(users.role, STAFF_ROLES),
-      orderBy: (u, { asc }) => [asc(u.last_name)],
+      orderBy: [asc(users.last_name)],
     });
-    return rows.map((row) => UsersService.toPublic(row));
+    return rows.map((row: User) => UsersService.toPublic(row));
   }
 
   async create(input: {
@@ -64,4 +77,3 @@ export class UsersService {
     return UsersService.toPublic(created);
   }
 }
-

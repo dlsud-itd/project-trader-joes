@@ -34,9 +34,13 @@ export class HttpExceptionFilter implements ExceptionFilter {
         : (body as Record<string, unknown>);
 
       if (Array.isArray(message)) {
-        res.status(status).json({ error: 'Some fields are invalid.', details: message });
+        res
+          .status(status)
+          .json({ error: 'Some fields are invalid.', details: message });
       } else {
-        res.status(status).json({ error: message ?? exception.message, ...extra });
+        res
+          .status(status)
+          .json({ error: message ?? exception.message, ...extra });
       }
       return;
     }

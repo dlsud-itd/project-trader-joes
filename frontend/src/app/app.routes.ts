@@ -1,5 +1,11 @@
 import { Routes } from '@angular/router';
-import { authGuard, guestGuard, roleGuard, staffGuard } from './core/auth/auth.guards';
+import {
+  authGuard,
+  guestGuard,
+  roleGuard,
+  staffGuard,
+} from './core/auth/auth.guards';
+import { UserRole } from './core/auth/auth.models';
 import { unsavedChangesGuard } from './core/job-postings';
 
 export const routes: Routes = [
@@ -9,7 +15,7 @@ export const routes: Routes = [
     title: 'Sign in · TalentFlow',
     loadComponent: () => import('./pages/login/login').then((m) => m.Login),
   },
-    {
+  {
     // Public pages for applicants. No sign-in needed.
     path: 'careers',
     loadComponent: () =>
@@ -52,7 +58,8 @@ export const routes: Routes = [
     ],
   },
   {
-    // Everything inside the shell requires a signed-in staff member (manager or recruiter).
+    // Everything inside the shell requires a signed-in staff member
+    // (manager or recruiter).
     path: '',
     canActivate: [authGuard, staffGuard],
     loadComponent: () => import('./layout/shell').then((m) => m.Shell),
@@ -73,7 +80,7 @@ export const routes: Routes = [
       {
         path: 'postings/new',
         title: 'New job posting · TalentFlow',
-        canActivate: [roleGuard('manager')],
+        canActivate: [roleGuard(UserRole.MANAGER)],
         canDeactivate: [unsavedChangesGuard],
         loadComponent: () =>
           import('./pages/posting-form/posting-form').then(
@@ -83,7 +90,7 @@ export const routes: Routes = [
       {
         path: 'postings/:id/edit',
         title: 'Edit job posting · TalentFlow',
-        canActivate: [roleGuard('manager')],
+        canActivate: [roleGuard(UserRole.MANAGER)],
         canDeactivate: [unsavedChangesGuard],
         loadComponent: () =>
           import('./pages/posting-form/posting-form').then(
@@ -101,7 +108,7 @@ export const routes: Routes = [
       {
         path: 'team',
         title: 'Team accounts · TalentFlow',
-        canActivate: [roleGuard('manager')],
+        canActivate: [roleGuard(UserRole.MANAGER)],
         loadComponent: () => import('./pages/team/team').then((m) => m.Team),
       },
     ],

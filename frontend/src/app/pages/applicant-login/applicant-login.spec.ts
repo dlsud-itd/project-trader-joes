@@ -7,7 +7,7 @@ import {
 import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
 import { environment } from '../../../environments/environment';
-import { User } from '../../core/auth/auth.models';
+import { User, UserRole } from '../../core/auth/auth.models';
 import { ApplicantLogin } from './applicant-login';
 
 const LOGIN_URL = `${environment.apiUrl}/auth/login`;
@@ -21,7 +21,7 @@ const applicant: User = {
   email: VALID_EMAIL,
   first_name: 'Ana',
   last_name: 'Cruz',
-  role: 'applicant',
+  role: UserRole.APPLICANT,
   created_at: '2026-10-16T00:00:00Z',
 };
 
@@ -65,20 +65,20 @@ describe('ApplicantLogin page', () => {
 
   it('disables the button while signing in', async () => {
     page.form.setValue({ email: VALID_EMAIL, password: VALID_PASSWORD });
-    const signingIn = page.submit();
+    page.submit();
     fixture.detectChanges();
 
     expect(findSubmitButton().disabled).toBe(true);
 
     http.expectOne(LOGIN_URL).flush({ token: FAKE_TOKEN, user: applicant });
-    await signingIn;
+    await fixture.whenStable();
     fixture.detectChanges();
 
     expect(findSubmitButton().disabled).toBe(false);
   });
 
-  it('does not send anything when the form is empty', async () => {
-    await page.submit();
+  it('does not send anything when the form is empty', () => {
+    page.submit();
 
     http.expectNone(LOGIN_URL);
     expect(page.submitting()).toBe(false);
