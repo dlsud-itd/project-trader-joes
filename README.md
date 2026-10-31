@@ -20,6 +20,7 @@ Recruiters post jobs, applicants apply through an online form, an AI service sco
 |---|---|---|
 | Recruitment Manager | `manager@talentflow.dev` | `Manager123!` |
 | Recruiter | `recruiter@talentflow.dev` | `Recruiter123!` |
+| Applicant | `applicant@talentflow.dev` | `Applicant123!` |
 
 These are created automatically the first time the API starts on an empty database.
 
@@ -104,6 +105,7 @@ All routes start with `/api`. Send the token from login as `Authorization: Beare
 |---|---|---|---|
 | POST | `/auth/login` | Public | I.A |
 | POST | `/auth/register` | Manager | I.B |
+| POST | `/auth/register-applicant` | Public | – |
 | GET | `/auth/me` | Signed in | – |
 | GET | `/health` | Public | – |
 

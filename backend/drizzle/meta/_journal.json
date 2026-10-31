@@ -36,6 +36,13 @@
       "when": 1793415864734,
       "tag": "0004_screening_failure_reason",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793430063590,
+      "tag": "0005_add-applicant-role",
+      "breakpoints": true
     }
   ]
 }
