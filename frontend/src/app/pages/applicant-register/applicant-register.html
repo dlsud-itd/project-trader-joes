@@ -1,0 +1,92 @@
+<header class="head">
+  <h1>Create your account</h1>
+  <p>Track your applications and apply faster next time.</p>
+</header>
+
+<form class="card" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+  @if (error(); as message) {
+    <div class="tf-alert tf-alert--error" role="alert">{{ message }}</div>
+  }
+
+  <div class="row">
+    <div class="tf-field">
+      <label for="first_name">First name</label>
+      <input
+        id="first_name"
+        formControlName="first_name"
+        autocomplete="given-name"
+        [class.is-invalid]="showError('first_name')"
+        [attr.aria-invalid]="showError('first_name')"
+      />
+      @if (showError('first_name')) {
+        <span class="tf-error">Enter your first name.</span>
+      }
+    </div>
+
+    <div class="tf-field">
+      <label for="last_name">Last name</label>
+      <input
+        id="last_name"
+        formControlName="last_name"
+        autocomplete="family-name"
+        [class.is-invalid]="showError('last_name')"
+        [attr.aria-invalid]="showError('last_name')"
+      />
+      @if (showError('last_name')) {
+        <span class="tf-error">Enter your last name.</span>
+      }
+    </div>
+  </div>
+
+  <div class="tf-field">
+    <label for="email">Email</label>
+    <input
+      id="email"
+      type="email"
+      autocomplete="email"
+      formControlName="email"
+      placeholder="you@example.com"
+      [class.is-invalid]="showError('email')"
+      [attr.aria-invalid]="showError('email')"
+    />
+    @if (showError('email')) {
+      <span class="tf-error">Enter a valid email address.</span>
+    }
+  </div>
+
+  <div class="tf-field">
+    <label for="password">Password</label>
+    <div class="password">
+      <input
+        id="password"
+        [type]="showPassword() ? 'text' : 'password'"
+        autocomplete="new-password"
+        formControlName="password"
+        [class.is-invalid]="showError('password')"
+        [attr.aria-invalid]="showError('password')"
+      />
+      <button
+        type="button"
+        class="password__toggle"
+        (click)="showPassword.set(!showPassword())"
+        [attr.aria-label]="showPassword() ? 'Hide password' : 'Show password'"
+      >
+        {{ showPassword() ? 'Hide' : 'Show' }}
+      </button>
+    </div>
+    @if (showError('password')) {
+      <span class="tf-error">At least 8 characters, with a letter and a number.</span>
+    }
+  </div>
+
+  <button class="tf-btn tf-btn--primary" type="submit" [disabled]="submitting()">
+    @if (submitting()) {
+      <span class="tf-spinner" aria-hidden="true"></span>
+      Creating account…
+    } @else {
+      Create account
+    }
+  </button>
+
+  <p class="card__note">Already have an account? <a routerLink="/careers/login">Sign in</a></p>
+</form>

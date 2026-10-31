@@ -6,6 +6,7 @@ import { environment } from '../../../environments/environment';
 import {
   LoginRequest,
   LoginResponse,
+  RegisterApplicantRequest,
   RegisterRequest,
   RegisterResponse,
   User,
@@ -14,10 +15,7 @@ import {
 
 const TOKEN_KEY = 'talentflow.token';
 
-/**
- * Holds the signed-in user and token.
- * The token is kept in localStorage so a page refresh keeps the session.
- */
+
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly http = inject(HttpClient);
@@ -54,10 +52,12 @@ export class AuthService {
     return firstValueFrom(this.http.post<RegisterResponse>(`${this.api}/register`, body));
   }
 
-  /**
-   * Restores the session after a page refresh by asking the API who the token belongs to.
-   * Returns false if there is no token or it is no longer valid.
-   */
+  registerApplicant(body: RegisterApplicantRequest): Promise<RegisterResponse> {
+    return firstValueFrom(
+      this.http.post<RegisterResponse>(`${this.api}/register-applicant`, body),
+    );
+  }
+
   async restoreSession(): Promise<boolean> {
     if (this._user()) return true;
     if (!this._token()) return false;
@@ -70,10 +70,10 @@ export class AuthService {
     }
   }
 
-  /** Tokens are stateless, so signing out only clears them on this device. */
   logout(reason?: 'expired'): void {
+    const destination = this.hasRole('applicant') ? '/careers' : '/login';
     this.clear();
-    void this.router.navigate(['/login'], reason ? { queryParams: { reason } } : {});
+    void this.router.navigate([destination], reason ? { queryParams: { reason } } : {});
   }
 
   private setToken(token: string): void {

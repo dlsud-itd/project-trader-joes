@@ -5,7 +5,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { apiErrorMessage } from '../../core/api/api-error';
-import { ROLE_LABELS, User, UserRole } from '../../core/auth/auth.models';
+import { ROLE_LABELS, STAFF_ROLE_LABELS, StaffRole, User } from '../../core/auth/auth.models';
 import { AuthService } from '../../core/auth/auth.service';
 
 /**
@@ -22,7 +22,8 @@ export class Team implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly http = inject(HttpClient);
 
-  protected readonly roles = Object.entries(ROLE_LABELS) as [UserRole, string][];
+  /** Only managers and recruiters can be created here; applicants self-register on the careers site. */
+  protected readonly roles = Object.entries(STAFF_ROLE_LABELS) as [StaffRole, string][];
   protected readonly roleLabels = ROLE_LABELS;
   protected readonly saving = signal(false);
   protected readonly error = signal<string | null>(null);
@@ -40,7 +41,7 @@ export class Team implements OnInit {
       '',
       [Validators.required, Validators.minLength(8), Validators.pattern(/(?=.*[A-Za-z])(?=.*\d)/)],
     ],
-    role: ['recruiter' as UserRole, Validators.required],
+    role: ['recruiter' as StaffRole, Validators.required],
   });
 
   async ngOnInit(): Promise<void> {

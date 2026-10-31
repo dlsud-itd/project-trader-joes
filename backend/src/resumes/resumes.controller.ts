@@ -15,6 +15,7 @@ import { ConfigService } from '@nestjs/config';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiTags } from '@nestjs/swagger';
 import { Public } from '../common/decorators/public.decorator.js';
+import { Roles } from '../common/decorators/roles.decorator.js';
 import { verifyUploadToken } from '../common/upload-token/upload-token.js';
 import { UploadResumeDto } from './dto/upload-resume.dto.js';
 import { RESUME_MAX_BYTES, type UploadedResumeFile } from './resume-file.js';
@@ -77,6 +78,7 @@ export class ResumesController {
 
   /** GET /api/resumes/:id/file — downloads the original file. Staff only. */
   @ApiBearerAuth()
+  @Roles('manager', 'recruiter')
   @Get(':id/file')
   async download(@Param('id', resumeId()) id: number) {
     const file = await this.resumes.getFile(id);
