@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Inject,
   Injectable,
   NotFoundException,
@@ -27,6 +28,20 @@ export type StaffJobPosting = JobPosting & { author: PostingAuthor | null };
 
 /** What visitors see on the careers page: no internal fields. */
 export type PublicJobPosting = Omit<JobPosting, 'created_by' | 'updated_at'>;
+
+/**
+ * Postgres refused the delete because another row still points to it:
+ * 23001 for ON DELETE RESTRICT, 23503 for NO ACTION. Drizzle wraps the
+ * driver's error, so the code may be on `cause`.
+ */
+const REFERENCED_ROW_CODES = new Set(['23001', '23503']);
+
+function isForeignKeyViolation(err: unknown): boolean {
+  const code = (e: unknown) => (e as { code?: unknown } | null)?.code;
+  return [code(err), code((err as { cause?: unknown })?.cause)].some(
+    (c: unknown) => typeof c === 'string' && REFERENCED_ROW_CODES.has(c),
+  );
+}
 
 /** Escapes LIKE wildcards so a search for "50%" matches literally. */
 const likePattern = (term: string) => `%${term.replace(/[\\%_]/g, '\\$&')}%`;
@@ -142,6 +157,28 @@ export class JobPostingsService {
 
   setStatus(id: number, status: JobPostingStatus): Promise<JobPosting> {
     return this.update(id, { status });
+  }
+
+  /**
+   * Deletes a posting nobody has applied to. Applications keep their posting
+   * (the foreign key blocks the delete), so those postings must be closed.
+   */
+  async remove(id: number): Promise<void> {
+    let deleted: { id: number }[];
+    try {
+      deleted = await this.db
+        .delete(jobPostings)
+        .where(eq(jobPostings.id, id))
+        .returning({ id: jobPostings.id });
+    } catch (err) {
+      if (isForeignKeyViolation(err)) {
+        throw new ConflictException(
+          'This posting has applicants, so it can’t be deleted. Close it instead.',
+        );
+      }
+      throw err;
+    }
+    if (!deleted.length) throw new NotFoundException('Job posting not found.');
   }
 
   private async getRow(id: number): Promise<JobPosting> {

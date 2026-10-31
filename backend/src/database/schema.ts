@@ -179,6 +179,7 @@ export const applicationsRelations = relations(applications, ({ one }) => ({
   }),
   profile: one(applicantProfiles),
   resume: one(resumes),
+  screening: one(aiScreenings),
 }));
 
 export const applicantProfilesRelations = relations(
@@ -202,3 +203,53 @@ export type Application = typeof applications.$inferSelect;
 export type KanbanStage = (typeof kanbanStageEnum.enumValues)[number];
 export type ApplicantProfile = typeof applicantProfiles.$inferSelect;
 export type Resume = typeof resumes.$inferSelect;
+
+/* ---------------------------------------------------------------- Sprint 3 */
+
+/**
+ * `completed` has a fit score; `failed` means Gemini could not be reached or
+ * returned something unusable, and the screening can be retried.
+ */
+export const screeningStatusEnum = pgEnum('screening_status', [
+  'completed',
+  'failed',
+]);
+
+/** How well the resume shows one posting requirement. */
+export type RequirementMatch = {
+  requirement: string;
+  match: 'met' | 'partial' | 'missing';
+  evidence: string;
+};
+
+/**
+ * The AI fit score for one application (API spec VI). Retrying updates the
+ * same row and adds one to `retry_count`.
+ */
+export const aiScreenings = pgTable('ai_screenings', {
+  id: serial('id').primaryKey(),
+  application_id: integer('application_id')
+    .notNull()
+    .unique()
+    .references(() => applications.id, { onDelete: 'cascade' }),
+  /** 0–100; null while the screening has failed. */
+  fit_score: integer('fit_score'),
+  explanation: text('explanation'),
+  /** One entry per posting requirement, for the fit score breakdown card. */
+  requirement_matches: jsonb('requirement_matches').$type<RequirementMatch[]>(),
+  status: screeningStatusEnum('status').notNull(),
+  retry_count: integer('retry_count').notNull().default(0),
+  screened_at: timestamp('screened_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const aiScreeningsRelations = relations(aiScreenings, ({ one }) => ({
+  application: one(applications, {
+    fields: [aiScreenings.application_id],
+    references: [applications.id],
+  }),
+}));
+
+export type AiScreening = typeof aiScreenings.$inferSelect;
+export type ScreeningStatus = (typeof screeningStatusEnum.enumValues)[number];
