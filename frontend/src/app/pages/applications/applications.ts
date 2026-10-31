@@ -8,19 +8,26 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { FitTier, fitTier } from '../../core/ai-screenings';
+import {
+  FIT_TIER_LABEL,
+  FitTier,
+  fitTier,
+  ScreeningStatus,
+} from '../../core/ai-screenings';
 import { FitScoreBadge } from '../../shared/fit-score-badge';
 import { ApplicantDetail } from './applicant-detail';
 import { initials } from './initials';
 import { ApplicationRow, SAMPLE_APPLICATIONS } from './sample-applications';
 
+/** Quick filters: every applicant, a fit tier, or not scored yet. */
 export type FitFilter = 'all' | FitTier | 'unscored';
 export type SortOrder = 'fit' | 'newest';
 
 /** Which quick filter an application falls under. */
 export function fitGroup(row: ApplicationRow): Exclude<FitFilter, 'all'> {
   const s = row.screening;
-  if (s?.status !== 'completed' || s.fit_score == null) return 'unscored';
+  const isScored = s?.status === ScreeningStatus.COMPLETED;
+  if (!isScored || s?.fit_score == null) return 'unscored';
   return fitTier(s.fit_score);
 }
 
@@ -72,16 +79,24 @@ export class Applications {
   });
 
   protected readonly filters = computed(() => {
-    const counts = { all: 0, strong: 0, possible: 0, weak: 0, unscored: 0 };
-    for (const r of this.searched()) {
+    const counts: Record<FitFilter, number> = {
+      all: 0,
+      [FitTier.STRONG]: 0,
+      [FitTier.POSSIBLE]: 0,
+      [FitTier.WEAK]: 0,
+      unscored: 0,
+    };
+    for (const row of this.searched()) {
       counts.all++;
-      counts[fitGroup(r)]++;
+      counts[fitGroup(row)]++;
     }
     return [
       { id: 'all', label: 'All', count: counts.all },
-      { id: 'strong', label: 'Strong fit', count: counts.strong },
-      { id: 'possible', label: 'Possible fit', count: counts.possible },
-      { id: 'weak', label: 'Weak fit', count: counts.weak },
+      ...Object.values(FitTier).map((tier: FitTier) => ({
+        id: tier,
+        label: FIT_TIER_LABEL[tier],
+        count: counts[tier],
+      })),
       { id: 'unscored', label: 'Not scored', count: counts.unscored },
     ] satisfies { id: FitFilter; label: string; count: number }[];
   });

@@ -49,7 +49,11 @@ export class ResumesController {
       properties: {
         application_id: { type: 'integer', example: 101 },
         upload_token: { type: 'string' },
-        file: { type: 'string', format: 'binary' },
+        file: {
+          type: 'string',
+          format: 'binary',
+          description: 'The resume as a PDF, 5 MB or smaller.',
+        },
       },
     },
   })

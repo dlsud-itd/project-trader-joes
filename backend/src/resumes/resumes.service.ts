@@ -3,6 +3,7 @@ import {
   ConflictException,
   Inject,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
@@ -10,11 +11,12 @@ import { DB, type Database } from '../database/database.module.js';
 import { applications, resumes } from '../database/schema.js';
 import {
   cleanFileName,
-  detectResumeType,
+  isPdf,
   RESUME_MAX_BYTES,
-  RESUME_MIME_TYPES,
+  RESUME_MIME_TYPE,
   type UploadedResumeFile,
 } from './resume-file.js';
+import { ResumeTextService } from './resume-text.service.js';
 
 /** Every column except the file bytes, which are only read for downloads. */
 const resumeInfo = {
@@ -29,9 +31,17 @@ const resumeInfo = {
 
 @Injectable()
 export class ResumesService {
-  constructor(@Inject(DB) private readonly db: Database) {}
+  private readonly logger = new Logger(ResumesService.name);
 
-  /** Checks the file, then stores it. Each application has one resume. */
+  constructor(
+    @Inject(DB) private readonly db: Database,
+    private readonly resumeText: ResumeTextService,
+  ) {}
+
+  /**
+   * Checks the file, stores it, then reads its text for AI screening.
+   * Each application has one resume.
+   */
   async upload(applicationId: number, file: UploadedResumeFile | undefined) {
     if (!file || file.size === 0) {
       throw new BadRequestException('Invalid or missing resume document.');
@@ -39,9 +49,8 @@ export class ResumesService {
     if (file.size > RESUME_MAX_BYTES) {
       throw new BadRequestException('The resume must be 5 MB or smaller.');
     }
-    const type = detectResumeType(file.buffer, file.originalname);
-    if (!type) {
-      throw new BadRequestException('Upload a PDF or Word (.docx) file.');
+    if (!isPdf(file.buffer)) {
+      throw new BadRequestException('Upload a PDF file.');
     }
 
     const application = await this.db.query.applications.findFirst({
@@ -56,26 +65,35 @@ export class ResumesService {
       );
     }
 
-    return this.db.transaction(async (tx) => {
+    const saved = await this.db.transaction(async (tx) => {
       const [created] = await tx
         .insert(resumes)
         .values({
           application_id: applicationId,
           file_url: '',
-          file_name: cleanFileName(file.originalname, type),
-          mime_type: RESUME_MIME_TYPES[type],
+          file_name: cleanFileName(file.originalname),
+          mime_type: RESUME_MIME_TYPE,
           size_bytes: file.size,
           data: file.buffer,
         })
         .returning({ id: resumes.id });
       // The download link needs the new id, so it is set right after insert.
-      const [saved] = await tx
+      const [updated] = await tx
         .update(resumes)
         .set({ file_url: `/api/resumes/${created.id}/file` })
         .where(eq(resumes.id, created.id))
         .returning(resumeInfo);
-      return saved;
+      return updated;
     });
+
+    // The file is already saved, so a failure here must not fail the upload:
+    // screening reads the text again when it is missing.
+    await this.resumeText
+      .extractAndSave({ id: saved.id, data: file.buffer })
+      .catch((err: unknown) =>
+        this.logger.error(`Resume ${saved.id}: text not saved`, err),
+      );
+    return saved;
   }
 
   /** The file bytes and what to call them, for staff downloads. */

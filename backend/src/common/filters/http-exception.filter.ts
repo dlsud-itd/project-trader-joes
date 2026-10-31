@@ -10,7 +10,9 @@ import type { Response } from 'express';
 
 /**
  * Formats every error as `{ "error": "...", "details"?: [...] }`,
- * matching the FAIL responses in the API specification.
+ * matching the FAIL responses in the API specification. Extra fields thrown
+ * with the message (e.g. `status` and `retry_count` for a failed AI
+ * screening) are sent along with it.
  */
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
@@ -22,13 +24,19 @@ export class HttpExceptionFilter implements ExceptionFilter {
     if (exception instanceof HttpException) {
       const status = exception.getStatus();
       const body = exception.getResponse();
-      const message =
-        typeof body === 'string' ? body : (body as { message?: unknown }).message;
+      const {
+        message,
+        error: _error,
+        statusCode: _statusCode,
+        ...extra
+      } = typeof body === 'string'
+        ? { message: body }
+        : (body as Record<string, unknown>);
 
       if (Array.isArray(message)) {
         res.status(status).json({ error: 'Some fields are invalid.', details: message });
       } else {
-        res.status(status).json({ error: message ?? exception.message });
+        res.status(status).json({ error: message ?? exception.message, ...extra });
       }
       return;
     }

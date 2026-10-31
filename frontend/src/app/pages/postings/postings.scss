@@ -257,6 +257,14 @@
   cursor: pointer;
 }
 
+.item__delete {
+  color: var(--tf-danger);
+
+  &:hover:not(:disabled) {
+    background: var(--tf-danger-soft);
+  }
+}
+
 .confirm {
   width: min(440px, calc(100% - 32px));
   padding: 24px;

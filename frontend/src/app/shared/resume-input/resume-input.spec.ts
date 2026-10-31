@@ -11,15 +11,16 @@ const fileOf = (name: string, size = 1000) =>
   new File([new Uint8Array(size)], name, { type: 'application/octet-stream' });
 
 describe('resumeFileError', () => {
-  it('accepts PDF and .docx files up to 5 MB', () => {
+  it('accepts PDF files up to 5 MB', () => {
     expect(resumeFileError(fileOf('cv.pdf'))).toBeNull();
-    expect(resumeFileError(fileOf('CV.DOCX'))).toBeNull();
+    expect(resumeFileError(fileOf('CV.PDF'))).toBeNull();
     expect(resumeFileError(fileOf('cv.pdf', RESUME_MAX_BYTES))).toBeNull();
   });
 
   it('refuses other types, empty files, and files over 5 MB', () => {
-    expect(resumeFileError(fileOf('cv.doc'))).toMatch(/PDF or Word/);
-    expect(resumeFileError(fileOf('photo.png'))).toMatch(/PDF or Word/);
+    expect(resumeFileError(fileOf('cv.docx'))).toBe('Choose a PDF file.');
+    expect(resumeFileError(fileOf('cv.doc'))).toBe('Choose a PDF file.');
+    expect(resumeFileError(fileOf('photo.png'))).toBe('Choose a PDF file.');
     expect(resumeFileError(fileOf('cv.pdf', 0))).toMatch(/empty/);
     expect(resumeFileError(fileOf('cv.pdf', RESUME_MAX_BYTES + 1))).toMatch(
       /5 MB/,
@@ -66,19 +67,25 @@ describe('ResumeInput', () => {
   it('refuses a wrong file and explains why', () => {
     pick(fileOf('photo.png'));
     expect(fixture.componentInstance.file()).toBeNull();
-    expect(text()).toContain('Choose a PDF or Word (.docx) file.');
+    expect(text()).toContain('Choose a PDF file.');
+  });
+
+  it('refuses a Word file', () => {
+    pick(fileOf('Juan CV.docx'));
+    expect(fixture.componentInstance.file()).toBeNull();
+    expect(text()).toContain('Choose a PDF file.');
   });
 
   it('accepts a dropped file', () => {
     const drop = new Event('drop') as DragEvent;
     Object.defineProperty(drop, 'dataTransfer', {
-      value: { files: [fileOf('cv.docx')] },
+      value: { files: [fileOf('cv.pdf')] },
     });
     fixture.debugElement
       .query(By.css('.drop'))
       .nativeElement.dispatchEvent(drop);
     fixture.detectChanges();
-    expect(fixture.componentInstance.file()?.name).toBe('cv.docx');
+    expect(fixture.componentInstance.file()?.name).toBe('cv.pdf');
   });
 
   it('can remove the chosen file', () => {

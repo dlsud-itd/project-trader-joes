@@ -144,10 +144,64 @@ describe('Postings page', () => {
     ).toBe('true');
   });
 
+  it('asks before deleting, then removes the posting', async () => {
+    await render([posting({}), posting({ id: 2, title: 'HR Associate' })]);
+    fixture.debugElement.query(By.css('.item__delete')).nativeElement.click();
+    fixture.detectChanges();
+    expect(text()).toContain('Delete “Software Developer”?');
+
+    fixture.debugElement
+      .query(By.css('.confirm__delete'))
+      .nativeElement.click();
+    const req = http.expectOne(`${API}/1`);
+    expect(req.request.method).toBe('DELETE');
+    req.flush({ message: 'Job posting deleted.' });
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(titles()).toEqual(['HR Associate']);
+    expect(text()).toContain('“Software Developer” was deleted.');
+  });
+
+  it('keeps the posting and explains when it has applicants', async () => {
+    await render([posting({})]);
+    fixture.debugElement.query(By.css('.item__delete')).nativeElement.click();
+    fixture.detectChanges();
+    fixture.debugElement
+      .query(By.css('.confirm__delete'))
+      .nativeElement.click();
+    http.expectOne(`${API}/1`).flush(
+      {
+        error:
+          'This posting has applicants, so it can’t be deleted. Close it instead.',
+      },
+      { status: 409, statusText: 'Conflict' },
+    );
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(titles()).toEqual(['Software Developer']);
+    expect(text()).toContain('Close it instead.');
+  });
+
+  it('can cancel a delete', async () => {
+    await render([posting({})]);
+    fixture.debugElement.query(By.css('.item__delete')).nativeElement.click();
+    fixture.detectChanges();
+    fixture.debugElement
+      .queryAll(By.css('dialog button'))
+      .find((b) => b.nativeElement.textContent.includes('Keep posting'))!
+      .nativeElement.click();
+    fixture.detectChanges();
+    http.expectNone(`${API}/1`);
+    expect(titles()).toEqual(['Software Developer']);
+  });
+
   it('hides management controls from recruiters', async () => {
     isManager = false;
     await render([posting({})]);
     expect(fixture.debugElement.query(By.css('.tf-switch'))).toBeNull();
+    expect(fixture.debugElement.query(By.css('.item__delete'))).toBeNull();
     expect(text()).not.toContain('New posting');
   });
 });

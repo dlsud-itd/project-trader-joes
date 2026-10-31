@@ -38,7 +38,7 @@ const PREVIEW_REQUIREMENTS = 4;
 
 /**
  * Lists every job posting for signed-in staff.
- * Managers can also create, edit, and open or close postings from here.
+ * Managers can also create, edit, open or close, and delete postings here.
  */
 @Component({
   selector: 'app-postings',
@@ -69,6 +69,7 @@ export class Postings implements OnInit {
   });
   protected readonly pendingIds = signal<ReadonlySet<number>>(new Set());
   protected readonly confirming = signal<JobPosting | null>(null);
+  protected readonly deleting = signal<JobPosting | null>(null);
   protected readonly flash = signal<string | null>(null);
   private readonly highlightId = signal<number | null>(null);
   private readonly query = toSignal(this.searchControl.valueChanges, {
@@ -77,6 +78,8 @@ export class Postings implements OnInit {
 
   private readonly dialog =
     viewChild<ElementRef<HTMLDialogElement>>('confirmDialog');
+  private readonly deleteDialog =
+    viewChild<ElementRef<HTMLDialogElement>>('deleteDialog');
 
   protected readonly counts = computed(() => {
     const all = this.postings();
@@ -177,22 +180,65 @@ export class Postings implements OnInit {
     this.confirming.set(null);
   }
 
-  private setStatus(posting: JobPosting, status: JobPostingStatus): void {
+  /** Deleting can't be undone, so it always asks first. */
+  protected askDelete(posting: JobPosting): void {
+    this.deleting.set(posting);
+    this.deleteDialog()?.nativeElement.showModal();
+  }
+
+  protected cancelDelete(): void {
+    this.deleteDialog()?.nativeElement.close();
+    this.deleting.set(null);
+  }
+
+  /** The API refuses (409) when the posting has applicants. */
+  protected confirmDelete(): void {
+    const posting = this.deleting();
+    this.cancelDelete();
+    if (!posting) return;
+    this.startAction(posting);
+    this.postingsApi
+      .remove(posting.id)
+      .pipe(
+        finalize(() => this.endAction(posting)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: () => {
+          this.postings.update((list: JobPosting[]) =>
+            list.filter((p: JobPosting) => p.id !== posting.id),
+          );
+          this.flash.set(`“${posting.title}” was deleted.`);
+        },
+        error: (err: unknown) =>
+          this.actionError.set(
+            apiErrorMessage(err, 'Could not delete the posting.'),
+          ),
+      });
+  }
+
+  private startAction(posting: JobPosting): void {
     this.actionError.set(null);
     this.flash.set(null);
     this.pendingIds.update((ids: ReadonlySet<number>) =>
       new Set(ids).add(posting.id),
     );
+  }
+
+  private endAction(posting: JobPosting): void {
+    this.pendingIds.update((ids: ReadonlySet<number>) => {
+      const next = new Set(ids);
+      next.delete(posting.id);
+      return next;
+    });
+  }
+
+  private setStatus(posting: JobPosting, status: JobPostingStatus): void {
+    this.startAction(posting);
     this.postingsApi
       .setStatus(posting.id, status)
       .pipe(
-        finalize(() =>
-          this.pendingIds.update((ids: ReadonlySet<number>) => {
-            const next = new Set(ids);
-            next.delete(posting.id);
-            return next;
-          }),
-        ),
+        finalize(() => this.endAction(posting)),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({

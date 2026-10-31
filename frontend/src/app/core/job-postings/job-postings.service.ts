@@ -3,6 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
+  DeleteJobPostingResponse,
   JobPosting,
   JobPostingInput,
   JobPostingResponse,
@@ -41,5 +42,10 @@ export class JobPostingsService {
     return this.http.patch<JobPostingResponse>(`${this.api}/${id}/status`, {
       status,
     });
+  }
+
+  /** Fails with 409 when the posting has applicants; close it instead. */
+  remove(id: number): Observable<DeleteJobPostingResponse> {
+    return this.http.delete<DeleteJobPostingResponse>(`${this.api}/${id}`);
   }
 }

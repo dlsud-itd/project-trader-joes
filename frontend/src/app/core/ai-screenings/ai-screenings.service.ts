@@ -1,30 +1,39 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { map, Observable } from 'rxjs';
+import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { AiScreening, AiScreeningResponse } from './ai-screenings.models';
+import {
+  AiScreening,
+  AiScreeningInput,
+  AiScreeningResponse,
+} from './ai-screenings.models';
 
-/** Calls /api/ai-screenings. Staff only. */
+/** Calls /api/ai-screenings. Staff only on the API side. */
 @Injectable({ providedIn: 'root' })
 export class AiScreeningsService {
   private readonly http = inject(HttpClient);
   private readonly api = `${environment.apiUrl}/ai-screenings`;
 
-  /** The saved screening. 404 when the application hasn't been screened. */
-  get(applicationId: number): Observable<AiScreening> {
-    return this.http.get<AiScreening>(`${this.api}/${applicationId}`);
+  /**
+   * Screens the application's resume. A finished screening comes back as
+   * it is; a failed one answers 409 until it is retried.
+   */
+  screen(applicationId: number): Observable<AiScreeningResponse> {
+    const body: AiScreeningInput = { application_id: applicationId };
+    return this.http.post<AiScreeningResponse>(this.api, body);
   }
 
-  /**
-   * Scores the resume against its posting. A finished screening comes back
-   * as is; pass `retry` to run a failed one again.
-   */
-  screen(applicationId: number, retry = false): Observable<AiScreening> {
-    return this.http
-      .post<AiScreeningResponse>(this.api, {
-        application_id: applicationId,
-        retry,
-      })
-      .pipe(map((res) => res.screening));
+  /** Retry analysis trigger: screens the resume again. */
+  retry(applicationId: number): Observable<AiScreeningResponse> {
+    const body: AiScreeningInput = {
+      application_id: applicationId,
+      retry: true,
+    };
+    return this.http.post<AiScreeningResponse>(this.api, body);
+  }
+
+  /** The saved screening; 404 when the resume was never screened. */
+  get(applicationId: number): Observable<AiScreening> {
+    return this.http.get<AiScreening>(`${this.api}/${applicationId}`);
   }
 }

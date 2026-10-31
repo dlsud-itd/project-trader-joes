@@ -5,6 +5,7 @@ import {
   countMatches,
   MATCH_LABEL,
   RequirementMatchLevel,
+  ScreeningStatus,
 } from '../../core/ai-screenings';
 import { FitScoreBadge } from '../fit-score-badge';
 
@@ -37,11 +38,11 @@ export class FitScoreCard {
 
   protected readonly titleId = `fit-card-title-${nextId++}`;
   protected readonly matchLabel = MATCH_LABEL;
-  protected readonly levels: RequirementMatchLevel[] = [
-    'met',
-    'partial',
-    'missing',
-  ];
+  protected readonly ScreeningStatus = ScreeningStatus;
+  protected readonly MatchLevel = RequirementMatchLevel;
+  protected readonly levels: RequirementMatchLevel[] = Object.values(
+    RequirementMatchLevel,
+  );
   protected readonly expanded = signal(false);
 
   protected readonly matches = computed(
@@ -61,7 +62,7 @@ export class FitScoreCard {
   protected readonly isScored = computed(
     () =>
       !this.busy() &&
-      this.screening()?.status === 'completed' &&
+      this.screening()?.status === ScreeningStatus.COMPLETED &&
       this.screening()?.fit_score != null,
   );
 
