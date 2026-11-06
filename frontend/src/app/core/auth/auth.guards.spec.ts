@@ -7,7 +7,7 @@ import {
   RouterStateSnapshot,
   UrlTree,
 } from '@angular/router';
-import { firstValueFrom, isObservable, Observable, of } from 'rxjs';
+import { firstValueFrom, isObservable, Observable, of, tap } from 'rxjs';
 import { authGuard, guestGuard, roleGuard, staffGuard } from './auth.guards';
 import { UserRole } from './auth.models';
 import { AuthService } from './auth.service';
@@ -91,6 +91,33 @@ describe('staffGuard', () => {
 
     expect(result).toBeInstanceOf(UrlTree);
     expect(urlOf(result)).toBe('/careers');
+  });
+
+  it('waits for the session after a page refresh before checking', async () => {
+    // The user is only known once restoreSession() has answered.
+    let role: UserRole | null = null;
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]),
+        {
+          provide: AuthService,
+          useValue: {
+            hasRole: (...roles: UserRole[]): boolean =>
+              role !== null && roles.includes(role),
+            restoreSession: (): Observable<boolean> =>
+              of(true).pipe(
+                tap(() => {
+                  role = UserRole.MANAGER;
+                }),
+              ),
+          },
+        },
+      ],
+    });
+
+    const result = await runGuard(staffGuard);
+
+    expect(result).toBe(true);
   });
 });
 

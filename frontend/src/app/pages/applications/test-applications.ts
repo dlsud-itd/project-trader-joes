@@ -4,42 +4,19 @@ import {
   RequirementMatchLevel,
   ScreeningStatus,
 } from '../../core/ai-screenings';
+import { ApplicationRow, KanbanStage } from '../../core/applications';
 import { ResumeSummary } from '../../core/resumes';
 
 /**
- * Sample applicants for the Applications page. The API has no
- * GET /api/applications yet (Sprint 4: WBS 4.4); once it does, load the
- * list from there and delete this file.
+ * Applicants for the Applications and profile page tests: three fit tiers,
+ * one failed screening, one not screened yet, and one without a resume.
  */
-
-export type KanbanStage =
-  'Applied' | 'Screening' | 'Interview' | 'Offer' | 'Rejected';
-
-export type ApplicationRow = {
-  id: number;
-  full_name: string;
-  email: string;
-  posting_title: string;
-  kanban_stage: KanbanStage;
-  submitted_at: string;
-  phone: string | null;
-  portfolio_url: string | null;
-  cover_note: string | null;
-  /** Null when the applicant's upload never finished. */
-  resume: ResumeSummary | null;
-  screening: AiScreening | null;
-  /** What a sample "Score resume" or "Retry" returns. Sample data only. */
-  sample_result?: AiScreening;
-};
 
 const FRONTEND = 'Frontend Developer Intern';
 const QA = 'QA Analyst';
 
-/** Where the sample resume PDFs live, under frontend/public. */
-const SAMPLE_RESUME_DIR = '/sample-resumes';
-
-/** A sample resume, uploaded at the same time as the application. */
-function sampleResume(
+/** A resume uploaded at the same time as the application. */
+function resume(
   id: number,
   file_name: string,
   size_bytes: number,
@@ -50,7 +27,6 @@ function sampleResume(
     file_name,
     size_bytes,
     uploaded_at,
-    sample_file: `${SAMPLE_RESUME_DIR}/${id}.pdf`,
   };
 }
 
@@ -95,20 +71,21 @@ function failed(application_id: number): AiScreening {
   };
 }
 
-export const SAMPLE_APPLICATIONS: ApplicationRow[] = [
+export const TEST_APPLICATIONS: ApplicationRow[] = [
   {
     id: 101,
     full_name: 'Mei-Lin Chen',
     email: 'meilin.chen@example.com',
+    job_posting_id: 1,
     posting_title: FRONTEND,
-    kanban_stage: 'Screening',
+    kanban_stage: KanbanStage.SCREENING,
     submitted_at: '2026-10-21T02:10:00Z',
     phone: '+63 917 555 0101',
     portfolio_url: 'https://meilin.dev',
     cover_note:
       'I have shipped Angular features at two internships and would love ' +
       'to keep building tools that recruiters use every day.',
-    resume: sampleResume(
+    resume: resume(
       101,
       'Mei-Lin-Chen-Resume.pdf',
       2331,
@@ -151,19 +128,15 @@ export const SAMPLE_APPLICATIONS: ApplicationRow[] = [
     id: 102,
     full_name: 'Jonah Reyes',
     email: 'jonah.reyes@example.com',
+    job_posting_id: 1,
     posting_title: FRONTEND,
-    kanban_stage: 'Applied',
+    kanban_stage: KanbanStage.APPLIED,
     submitted_at: '2026-10-21T05:42:00Z',
     phone: '+63 918 555 0102',
     portfolio_url: 'https://github.com/jonahreyes',
     cover_note:
       'Most of my work is React, but I am picking up Angular for this role.',
-    resume: sampleResume(
-      102,
-      'Jonah_Reyes_CV.pdf',
-      2199,
-      '2026-10-21T05:42:00Z',
-    ),
+    resume: resume(102, 'Jonah_Reyes_CV.pdf', 2199, '2026-10-21T05:42:00Z'),
     screening: screening(
       102,
       90,
@@ -197,13 +170,14 @@ export const SAMPLE_APPLICATIONS: ApplicationRow[] = [
     id: 103,
     full_name: 'Aisha Rahman',
     email: 'aisha.rahman@example.com',
+    job_posting_id: 1,
     posting_title: FRONTEND,
-    kanban_stage: 'Interview',
+    kanban_stage: KanbanStage.INTERVIEW,
     submitted_at: '2026-10-20T08:15:00Z',
     phone: '+63 919 555 0103',
     portfolio_url: 'https://aisharahman.design',
     cover_note: null,
-    resume: sampleResume(
+    resume: resume(
       103,
       'Aisha Rahman - Resume.pdf',
       2189,
@@ -234,50 +208,28 @@ export const SAMPLE_APPLICATIONS: ApplicationRow[] = [
     id: 104,
     full_name: 'Lucas Martin',
     email: 'lucas.martin@example.com',
+    job_posting_id: 1,
     posting_title: FRONTEND,
-    kanban_stage: 'Applied',
+    kanban_stage: KanbanStage.APPLIED,
     submitted_at: '2026-10-22T01:05:00Z',
     phone: null,
     portfolio_url: null,
     cover_note: 'Looking for my first frontend role after my capstone project.',
-    resume: sampleResume(
+    resume: resume(
       104,
       'resume-lucas-martin.pdf',
       2176,
       '2026-10-22T01:05:00Z',
     ),
     screening: failed(104),
-    sample_result: screening(
-      104,
-      60,
-      'Comfortable with React and CSS from personal projects. TypeScript and Git are only lightly shown, and there is no testing experience.',
-      [
-        m(
-          'Angular or React in a real project',
-          MET,
-          'Personal React budgeting app, deployed on Vercel.',
-        ),
-        m('TypeScript', PARTIAL, 'Lists TypeScript under skills only.'),
-        m(
-          'Git and pull requests',
-          PARTIAL,
-          'GitHub profile linked; no team work described.',
-        ),
-        m(
-          'Responsive CSS',
-          MET,
-          'Hand-built responsive layouts with CSS grid.',
-        ),
-        m('Unit testing', MISSING, 'No testing tools or test work listed.'),
-      ],
-    ),
   },
   {
     id: 105,
     full_name: 'Hana Kim',
     email: 'hana.kim@example.com',
+    job_posting_id: 1,
     posting_title: FRONTEND,
-    kanban_stage: 'Applied',
+    kanban_stage: KanbanStage.APPLIED,
     submitted_at: '2026-10-31T03:30:00Z',
     phone: '+63 920 555 0105',
     portfolio_url: null,
@@ -285,51 +237,19 @@ export const SAMPLE_APPLICATIONS: ApplicationRow[] = [
       'My resume upload failed on the careers page. I can send it by email.',
     resume: null,
     screening: null,
-    sample_result: screening(
-      105,
-      40,
-      'Design-focused profile with strong CSS and some React. Little evidence of TypeScript, Git workflow, or code testing.',
-      [
-        m(
-          'Angular or React in a real project',
-          PARTIAL,
-          'React prototypes for a design class.',
-        ),
-        m('TypeScript', MISSING, 'Not mentioned.'),
-        m(
-          'Git and pull requests',
-          PARTIAL,
-          'Shared Figma and code files over GitHub.',
-        ),
-        m(
-          'Responsive CSS',
-          MET,
-          'Responsive landing pages for two student orgs.',
-        ),
-        m(
-          'Unit testing',
-          MISSING,
-          'Lists usability testing only, not code tests.',
-        ),
-      ],
-    ),
   },
   {
     id: 106,
     full_name: 'Kenji Watanabe',
     email: 'kenji.w@example.com',
+    job_posting_id: 2,
     posting_title: QA,
-    kanban_stage: 'Screening',
+    kanban_stage: KanbanStage.SCREENING,
     submitted_at: '2026-10-19T06:50:00Z',
     phone: '+63 921 555 0106',
     portfolio_url: 'https://github.com/kenjiw',
     cover_note: 'I enjoy breaking things before customers do.',
-    resume: sampleResume(
-      106,
-      'Kenji-Watanabe-QA.pdf',
-      2172,
-      '2026-10-19T06:50:00Z',
-    ),
+    resume: resume(106, 'Kenji-Watanabe-QA.pdf', 2172, '2026-10-19T06:50:00Z'),
     screening: screening(
       106,
       63,
@@ -358,13 +278,14 @@ export const SAMPLE_APPLICATIONS: ApplicationRow[] = [
     id: 107,
     full_name: 'Sofia Alvarez',
     email: 'sofia.alvarez@example.com',
+    job_posting_id: 2,
     posting_title: QA,
-    kanban_stage: 'Screening',
+    kanban_stage: KanbanStage.SCREENING,
     submitted_at: '2026-10-18T10:00:00Z',
     phone: '+63 922 555 0107',
     portfolio_url: null,
     cover_note: null,
-    resume: sampleResume(
+    resume: resume(
       107,
       'Sofia_Alvarez_Resume.pdf',
       2189,
@@ -390,19 +311,15 @@ export const SAMPLE_APPLICATIONS: ApplicationRow[] = [
     id: 108,
     full_name: 'Daniel Okafor',
     email: 'daniel.okafor@example.com',
+    job_posting_id: 2,
     posting_title: QA,
-    kanban_stage: 'Rejected',
+    kanban_stage: KanbanStage.REJECTED,
     submitted_at: '2026-10-17T04:20:00Z',
     phone: null,
     portfolio_url: 'https://linkedin.com/in/danielokafor',
     cover_note:
       'I have three years of support experience and want to move into QA.',
-    resume: sampleResume(
-      108,
-      'Daniel-Okafor.pdf',
-      2156,
-      '2026-10-17T04:20:00Z',
-    ),
+    resume: resume(108, 'Daniel-Okafor.pdf', 2156, '2026-10-17T04:20:00Z'),
     screening: screening(
       108,
       25,
@@ -420,18 +337,3 @@ export const SAMPLE_APPLICATIONS: ApplicationRow[] = [
     ),
   },
 ];
-
-/** What a sample "Score resume" or "Retry" leaves on the row. */
-export function withSampleResult(row: ApplicationRow): ApplicationRow {
-  const previous = row.screening;
-  const result = row.sample_result ?? previous;
-  if (!result) return row;
-  return {
-    ...row,
-    screening: {
-      ...result,
-      retry_count: previous ? previous.retry_count + 1 : 0,
-      screened_at: new Date().toISOString(),
-    },
-  };
-}

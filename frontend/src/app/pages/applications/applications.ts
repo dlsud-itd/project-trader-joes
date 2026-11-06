@@ -5,19 +5,25 @@ import {
   DestroyRef,
   ElementRef,
   inject,
+  OnInit,
   signal,
   viewChild,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { finalize } from 'rxjs';
 import {
+  AiScreening,
+  AiScreeningsService,
   FIT_TIER_LABEL,
   FitTier,
   fitTier,
   ScreeningStatus,
 } from '../../core/ai-screenings';
+import { apiErrorMessage } from '../../core/api/api-error';
+import { ApplicationRow, ApplicationsService } from '../../core/applications';
 import { FitScoreBadge } from '../../shared/fit-score-badge';
 import { ApplicantDetail } from './applicant-detail';
 import { initials } from './initials';
-import { ApplicationRow, SAMPLE_APPLICATIONS } from './sample-applications';
 
 /** Quick filters: every applicant, a fit tier, or not scored yet. */
 export type FitFilter = 'all' | FitTier | 'unscored';
@@ -31,12 +37,14 @@ export function fitGroup(row: ApplicationRow): Exclude<FitFilter, 'all'> {
   return fitTier(s.fit_score);
 }
 
-/** How long a sample screening "takes". */
-const SAMPLE_SCORING_MS = 1200;
+const LOAD_FAILED_MESSAGE = 'Could not load applicants.';
+export const SCORE_FAILED_MESSAGE = 'Could not score this resume. Try again.';
+export const NO_RESUME_MESSAGE =
+  'This applicant has not uploaded a resume yet, so it cannot be scored.';
 
 /**
  * Applications across all postings, with their AI fit scores
- * (WBS 4.3.3.2). Pick one to see the score breakdown and explanation.
+ * (WBS 4.3.3.2, 4.4). Pick one to see the score breakdown and explanation.
  */
 @Component({
   selector: 'app-applications',
@@ -44,21 +52,23 @@ const SAMPLE_SCORING_MS = 1200;
   templateUrl: './applications.html',
   styleUrl: './applications.scss',
 })
-export class Applications {
+export class Applications implements OnInit {
+  private readonly applicationsApi = inject(ApplicationsService);
+  private readonly screeningsApi = inject(AiScreeningsService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly detail = viewChild<ElementRef<HTMLElement>>('detail');
 
-  protected readonly rows = signal<ApplicationRow[]>(
-    structuredClone(SAMPLE_APPLICATIONS),
-  );
+  protected readonly rows = signal<ApplicationRow[]>([]);
+  protected readonly isLoading = signal(true);
+  protected readonly loadError = signal<string | null>(null);
+  /** Why the last Score / Re-score could not run (not a failed screening). */
+  protected readonly actionError = signal<string | null>(null);
   protected readonly query = signal('');
   protected readonly posting = signal('all');
   protected readonly sort = signal<SortOrder>('fit');
   protected readonly filter = signal<FitFilter>('all');
-  protected readonly selectedId = signal<number | null>(
-    SAMPLE_APPLICATIONS[0]?.id ?? null,
-  );
-  /** Applications with a (sample) screening in flight. */
+  protected readonly selectedId = signal<number | null>(null);
+  /** Applications with a screening in flight. */
   protected readonly scoring = signal<ReadonlySet<number>>(new Set());
 
   protected readonly postings = computed(() =>
@@ -120,6 +130,32 @@ export class Applications {
 
   protected readonly initials = initials;
 
+  ngOnInit(): void {
+    this.load();
+  }
+
+  load(): void {
+    this.isLoading.set(true);
+    this.loadError.set(null);
+    this.applicationsApi
+      .list()
+      .pipe(
+        finalize(() => this.isLoading.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (list: ApplicationRow[]) => {
+          this.rows.set(list);
+          // Open the best match once the list is in.
+          if (this.selected() === null) {
+            this.selectedId.set(this.visible()[0]?.id ?? null);
+          }
+        },
+        error: (err: unknown) =>
+          this.loadError.set(apiErrorMessage(err, LOAD_FAILED_MESSAGE)),
+      });
+  }
+
   protected select(row: ApplicationRow): void {
     this.selectedId.set(row.id);
     // On narrow screens the panel sits below the list; bring it into view.
@@ -135,37 +171,40 @@ export class Applications {
     return this.scoring().has(id);
   }
 
-  /**
-   * Sample stand-in for AiScreeningsService.screen(): waits, then shows the
-   * row's prepared result. Swap for the real call with the applications API.
-   */
+  /** Score resume / Re-score / Retry for one row. */
   protected score(row: ApplicationRow): void {
     if (this.isScoring(row.id)) return;
-    this.scoring.update((s) => new Set(s).add(row.id));
+    this.actionError.set(null);
+    if (!row.resume) {
+      this.actionError.set(NO_RESUME_MESSAGE);
+      return;
+    }
+    this.setScoring(row.id, true);
 
-    const timer = setTimeout(() => {
-      this.scoring.update((s) => {
-        const next = new Set(s);
-        next.delete(row.id);
-        return next;
+    this.screeningsApi
+      .screenOrRetry(row.id, row.screening !== null)
+      .pipe(
+        finalize(() => this.setScoring(row.id, false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (screening: AiScreening) =>
+          this.rows.update((rows: ApplicationRow[]) =>
+            rows.map((r: ApplicationRow) =>
+              r.id === row.id ? { ...r, screening } : r,
+            ),
+          ),
+        error: (err: unknown) =>
+          this.actionError.set(apiErrorMessage(err, SCORE_FAILED_MESSAGE)),
       });
-      this.rows.update((rows) =>
-        rows.map((r) => {
-          if (r.id !== row.id) return r;
-          const previous = r.screening;
-          const result = r.sample_result ?? previous;
-          if (!result) return r;
-          return {
-            ...r,
-            screening: {
-              ...result,
-              retry_count: previous ? previous.retry_count + 1 : 0,
-              screened_at: new Date().toISOString(),
-            },
-          };
-        }),
-      );
-    }, SAMPLE_SCORING_MS);
-    this.destroyRef.onDestroy(() => clearTimeout(timer));
+  }
+
+  private setScoring(id: number, isBusy: boolean): void {
+    this.scoring.update((ids: ReadonlySet<number>) => {
+      const next = new Set(ids);
+      if (isBusy) next.add(id);
+      else next.delete(id);
+      return next;
+    });
   }
 }

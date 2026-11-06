@@ -10,6 +10,7 @@ import {
   Post,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { Roles } from '../common/decorators/roles.decorator.js';
 import { AiScreeningsService } from './ai-screenings.service.js';
 import { CreateAiScreeningDto } from './dto/create-ai-screening.dto.js';
 
@@ -25,6 +26,8 @@ const applicationId = () =>
  */
 @ApiTags('AI screenings')
 @ApiBearerAuth()
+// Applicants can sign in too; only staff may screen or read fit scores.
+@Roles('manager', 'recruiter')
 @Controller('ai-screenings')
 export class AiScreeningsController {
   constructor(private readonly screenings: AiScreeningsService) {}

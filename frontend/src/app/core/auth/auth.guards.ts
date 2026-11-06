@@ -47,13 +47,24 @@ export const guestGuard: CanActivateFn = (): Observable<boolean | UrlTree> => {
   );
 };
 
-/** Keeps applicants out of the staff area. Use after authGuard. */
-export const staffGuard: CanActivateFn = (): boolean | UrlTree => {
+/**
+ * Keeps applicants out of the staff area. Use after authGuard.
+ * Angular runs it at the same time as authGuard, so after a page refresh it
+ * waits for the session first; checking straight away would see nobody
+ * signed in and send staff to the careers site.
+ */
+export const staffGuard: CanActivateFn = (): Observable<boolean | UrlTree> => {
   const auth = inject(AuthService);
   const router = inject(Router);
-  return auth.hasRole(...STAFF_ROLES)
-    ? true
-    : router.createUrlTree([AppPath.CAREERS]);
+  return auth
+    .restoreSession()
+    .pipe(
+      map(() =>
+        auth.hasRole(...STAFF_ROLES)
+          ? true
+          : router.createUrlTree([AppPath.CAREERS]),
+      ),
+    );
 };
 
 /**

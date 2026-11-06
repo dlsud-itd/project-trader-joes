@@ -15,9 +15,8 @@ export class ResumesService {
    * Fetched through HttpClient so the auth interceptor adds the token.
    */
   getFile(resume: ResumeSummary): Observable<Blob> {
-    const url = resume.sample_file ?? `${this.api}/${resume.id}/file`;
     return this.http
-      .get(url, { responseType: 'blob' })
+      .get(`${this.api}/${resume.id}/file`, { responseType: 'blob' })
       .pipe(map((file: Blob) => new Blob([file], { type: RESUME_MIME_TYPE })));
   }
 }

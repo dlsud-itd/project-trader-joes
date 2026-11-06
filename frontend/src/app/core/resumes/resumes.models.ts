@@ -4,8 +4,6 @@ export type ResumeSummary = {
   file_name: string;
   size_bytes: number;
   uploaded_at: string;
-  /** A bundled PDF to show instead of the API file. Sample data only. */
-  sample_file?: string;
 };
 
 /** The only file type the careers page accepts. */

@@ -7,9 +7,12 @@ import { AppModule } from '../src/app.module.js';
 import { HttpExceptionFilter } from '../src/common/filters/http-exception.filter.js';
 import { DB, type Database } from '../src/database/database.module.js';
 import {
+  aiScreenings,
   applicantProfiles,
   applications,
   jobPostings,
+  resumes,
+  users,
 } from '../src/database/schema.js';
 
 /**
@@ -23,6 +26,8 @@ describe('Applications (e2e)', () => {
   let manager: { Authorization: string };
   let openPostingId: number;
   let closedPostingId: number;
+  /** Applicant account made for the list tests; deleted afterwards. */
+  const applicantEmail = `e2e.list.${Date.now()}@example.com`;
 
   const api = () => request(app.getHttpServer());
 
@@ -85,6 +90,7 @@ describe('Applications (e2e)', () => {
         .where(inArray(applications.job_posting_id, postingIds));
       await db.delete(jobPostings).where(inArray(jobPostings.id, postingIds));
     }
+    await db.delete(users).where(eq(users.email, applicantEmail));
     await app.close();
   });
 
@@ -158,5 +164,145 @@ describe('Applications (e2e)', () => {
         kanban_stage: 'Offer',
       })
       .expect(400);
+  });
+
+  /** Applies straight in the database, so the list tests don't share emails. */
+  const addApplication = async (email: string) => {
+    const [created] = await db
+      .insert(applications)
+      .values({ job_posting_id: openPostingId })
+      .returning({ id: applications.id });
+    await db.insert(applicantProfiles).values({
+      application_id: created.id,
+      full_name: 'E2E List Applicant',
+      email,
+      phone: '+63 917 000 0000',
+      cover_note: 'Hello from the list test.',
+    });
+    return created.id;
+  };
+
+  const signIn = async (email: string, password: string) => {
+    const { body } = await api()
+      .post('/api/auth/login')
+      .send({ email, password })
+      .expect(200);
+    return { Authorization: `Bearer ${body.token}` };
+  };
+
+  it('lists applications for staff with the posting and screening', async () => {
+    const plainId = await addApplication('e2e.list.plain@example.com');
+    const scoredId = await addApplication('e2e.list.scored@example.com');
+    await db.insert(resumes).values({
+      application_id: scoredId,
+      file_url: '/api/resumes/0/file',
+      file_name: 'cv.pdf',
+      mime_type: 'application/pdf',
+      size_bytes: 8,
+      data: Buffer.from('%PDF-1.7'),
+    });
+    await db.insert(aiScreenings).values({
+      application_id: scoredId,
+      fit_score: 75,
+      explanation: 'Meets most requirements.',
+      requirement_matches: [
+        { requirement: 'JavaScript', match: 'met', evidence: '2 years' },
+        { requirement: 'SQL', match: 'partial', evidence: 'School project' },
+      ],
+      status: 'completed',
+    });
+
+    const { body } = await api()
+      .get('/api/applications')
+      .set(manager)
+      .expect(200);
+
+    const plain = body.find((a: { id: number }) => a.id === plainId);
+    const scored = body.find((a: { id: number }) => a.id === scoredId);
+    expect(plain).toMatchObject({
+      job_posting_id: openPostingId,
+      posting_title: 'E2E Applications open',
+      full_name: 'E2E List Applicant',
+      email: 'e2e.list.plain@example.com',
+      phone: '+63 917 000 0000',
+      portfolio_url: null,
+      cover_note: 'Hello from the list test.',
+      kanban_stage: 'Applied',
+      resume: null,
+      screening: null,
+    });
+    expect(plain.submitted_at).toEqual(expect.any(String));
+    expect(scored).toMatchObject({
+      resume: { file_name: 'cv.pdf', size_bytes: 8 },
+      screening: { fit_score: 75, status: 'completed', retry_count: 0 },
+    });
+    expect(scored.resume.id).toEqual(expect.any(Number));
+    expect(scored.screening.requirement_matches).toHaveLength(2);
+    // The file itself is downloaded separately, never sent in the list.
+    expect(scored.resume).not.toHaveProperty('data');
+  });
+
+  it('returns one application for the profile page', async () => {
+    const id = await addApplication('e2e.list.one@example.com');
+    const { body } = await api()
+      .get(`/api/applications/${id}`)
+      .set(manager)
+      .expect(200);
+    expect(body).toMatchObject({
+      id,
+      email: 'e2e.list.one@example.com',
+      posting_title: 'E2E Applications open',
+      resume: null,
+      screening: null,
+    });
+  });
+
+  it('returns 404 for an unknown or non-numeric application id', async () => {
+    const { body } = await api()
+      .get('/api/applications/999999999')
+      .set(manager)
+      .expect(404);
+    expect(body.error).toBe('Application not found.');
+    await api().get('/api/applications/abc').set(manager).expect(404);
+  });
+
+  it('lists the newest application first', async () => {
+    const olderId = await addApplication('e2e.list.older@example.com');
+    const newerId = await addApplication('e2e.list.newer@example.com');
+    const { body } = await api()
+      .get('/api/applications')
+      .set(manager)
+      .expect(200);
+    const ids = body.map((a: { id: number }) => a.id);
+    expect(ids.indexOf(newerId)).toBeLessThan(ids.indexOf(olderId));
+  });
+
+  it('lets recruiters see the list too', async () => {
+    const recruiter = await signIn('recruiter@talentflow.dev', 'Recruiter123!');
+    await api().get('/api/applications').set(recruiter).expect(200);
+  });
+
+  it('keeps applicants and signed-out visitors out (403, 401)', async () => {
+    await api()
+      .post('/api/auth/register-applicant')
+      .send({
+        email: applicantEmail,
+        password: 'Password123',
+        first_name: 'E2E',
+        last_name: 'Applicant',
+      })
+      .expect(201);
+    const asApplicant = await signIn(applicantEmail, 'Password123');
+
+    await api().get('/api/applications').set(asApplicant).expect(403);
+    await api().get('/api/applications/1').set(asApplicant).expect(403);
+    // Applicants can't run or read AI screenings either.
+    await api()
+      .post('/api/ai-screenings')
+      .set(asApplicant)
+      .send({ application_id: 1 })
+      .expect(403);
+    await api().get('/api/ai-screenings/1').set(asApplicant).expect(403);
+    await api().get('/api/applications').expect(401);
   });
 });

@@ -2,7 +2,20 @@
   ><span aria-hidden="true">←</span> All applications</a
 >
 
-@if (application(); as a) {
+@if (isLoading()) {
+  <p class="loading-page" role="status">Loading applicant…</p>
+} @else if (loadError(); as message) {
+  <div class="tf-alert tf-alert--error" role="alert">
+    <span>{{ message }}</span>
+    <button
+      class="tf-btn tf-btn--ghost tf-btn--sm"
+      type="button"
+      (click)="load()"
+    >
+      Try again
+    </button>
+  </div>
+} @else if (application(); as a) {
   <header class="hero">
     <span class="avatar" aria-hidden="true">{{ initials() }}</span>
     <div class="hero__text">
@@ -67,6 +80,9 @@
         }
       </section>
 
+      @if (actionError(); as message) {
+        <p class="tf-alert tf-alert--error" role="alert">{{ message }}</p>
+      }
       <app-fit-score-card
         [screening]="a.screening"
         [busy]="isScoring()"
