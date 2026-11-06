@@ -6,15 +6,32 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { and, eq } from 'drizzle-orm';
+import { and, desc, eq } from 'drizzle-orm';
 import { DB, type Database } from '../database/database.module.js';
 import {
+  type AiScreening,
   applicantProfiles,
   applications,
   jobPostings,
+  type KanbanStage,
 } from '../database/schema.js';
 import type { CreateApplicationDto } from './dto/create-application.dto.js';
 import { signUploadToken } from '../common/upload-token/upload-token.js';
+
+/** One row of GET /api/applications. */
+export type ApplicationListItem = {
+  id: number;
+  job_posting_id: number;
+  posting_title: string;
+  full_name: string;
+  email: string;
+  kanban_stage: KanbanStage;
+  submitted_at: Date;
+  /** False until the resume upload finishes; screening needs it. */
+  has_resume: boolean;
+  /** Null until the resume has been screened. */
+  screening: AiScreening | null;
+};
 
 @Injectable()
 export class ApplicationsService {
@@ -22,6 +39,40 @@ export class ApplicationsService {
     @Inject(DB) private readonly db: Database,
     private readonly config: ConfigService,
   ) {}
+
+  /** Every application, newest first, for the staff Applications page. */
+  async list(): Promise<ApplicationListItem[]> {
+    const rows = await this.db.query.applications.findMany({
+      columns: {
+        id: true,
+        job_posting_id: true,
+        kanban_stage: true,
+        submitted_at: true,
+      },
+      with: {
+        posting: { columns: { title: true } },
+        profile: { columns: { full_name: true, email: true } },
+        resume: { columns: { id: true } },
+        screening: true,
+      },
+      orderBy: [desc(applications.submitted_at), desc(applications.id)],
+    });
+    // Applying saves the profile in the same transaction, so every row has one.
+    return rows.flatMap(({ posting, profile, resume, screening, ...row }) =>
+      profile
+        ? [
+            {
+              ...row,
+              posting_title: posting.title,
+              full_name: profile.full_name,
+              email: profile.email,
+              has_resume: resume !== null,
+              screening: screening ?? null,
+            },
+          ]
+        : [],
+    );
+  }
 
   /**
    * Saves the application and the candidate's profile together, so there is

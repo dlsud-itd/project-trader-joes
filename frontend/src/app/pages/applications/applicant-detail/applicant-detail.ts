@@ -2,7 +2,7 @@ import { DatePipe } from '@angular/common';
 import { Component, computed, input, output } from '@angular/core';
 import { FitScoreCard } from '../../../shared/fit-score-card';
 import { initials } from '../initials';
-import { ApplicationRow } from '../sample-applications';
+import { ApplicationRow } from '../../../core/applications';
 
 /** The picked applicant: who they are, and their fit score breakdown. */
 @Component({

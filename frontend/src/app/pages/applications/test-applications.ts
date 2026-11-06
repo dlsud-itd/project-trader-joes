@@ -4,27 +4,12 @@ import {
   RequirementMatchLevel,
   ScreeningStatus,
 } from '../../core/ai-screenings';
+import { ApplicationRow, KanbanStage } from '../../core/applications';
 
 /**
- * Sample applicants for the Applications page. The API has no
- * GET /api/applications yet (Sprint 4: WBS 4.4); once it does, load the
- * list from there and delete this file.
+ * Applicants for the Applications page tests: three fit tiers, one failed
+ * screening, and one not screened yet.
  */
-
-export type KanbanStage =
-  'Applied' | 'Screening' | 'Interview' | 'Offer' | 'Rejected';
-
-export type ApplicationRow = {
-  id: number;
-  full_name: string;
-  email: string;
-  posting_title: string;
-  kanban_stage: KanbanStage;
-  submitted_at: string;
-  screening: AiScreening | null;
-  /** What a sample "Score resume" or "Retry" returns. Sample data only. */
-  sample_result?: AiScreening;
-};
 
 const FRONTEND = 'Frontend Developer Intern';
 const QA = 'QA Analyst';
@@ -70,14 +55,16 @@ function failed(application_id: number): AiScreening {
   };
 }
 
-export const SAMPLE_APPLICATIONS: ApplicationRow[] = [
+export const TEST_APPLICATIONS: ApplicationRow[] = [
   {
     id: 101,
     full_name: 'Mei-Lin Chen',
     email: 'meilin.chen@example.com',
+    job_posting_id: 1,
     posting_title: FRONTEND,
-    kanban_stage: 'Screening',
+    kanban_stage: KanbanStage.SCREENING,
     submitted_at: '2026-10-21T02:10:00Z',
+    has_resume: true,
     screening: screening(
       101,
       90,
@@ -115,9 +102,11 @@ export const SAMPLE_APPLICATIONS: ApplicationRow[] = [
     id: 102,
     full_name: 'Jonah Reyes',
     email: 'jonah.reyes@example.com',
+    job_posting_id: 1,
     posting_title: FRONTEND,
-    kanban_stage: 'Applied',
+    kanban_stage: KanbanStage.APPLIED,
     submitted_at: '2026-10-21T05:42:00Z',
+    has_resume: true,
     screening: screening(
       102,
       90,
@@ -151,9 +140,11 @@ export const SAMPLE_APPLICATIONS: ApplicationRow[] = [
     id: 103,
     full_name: 'Aisha Rahman',
     email: 'aisha.rahman@example.com',
+    job_posting_id: 1,
     posting_title: FRONTEND,
-    kanban_stage: 'Interview',
+    kanban_stage: KanbanStage.INTERVIEW,
     submitted_at: '2026-10-20T08:15:00Z',
+    has_resume: true,
     screening: screening(
       103,
       70,
@@ -179,79 +170,33 @@ export const SAMPLE_APPLICATIONS: ApplicationRow[] = [
     id: 104,
     full_name: 'Lucas Martin',
     email: 'lucas.martin@example.com',
+    job_posting_id: 1,
     posting_title: FRONTEND,
-    kanban_stage: 'Applied',
+    kanban_stage: KanbanStage.APPLIED,
     submitted_at: '2026-10-22T01:05:00Z',
+    has_resume: true,
     screening: failed(104),
-    sample_result: screening(
-      104,
-      60,
-      'Comfortable with React and CSS from personal projects. TypeScript and Git are only lightly shown, and there is no testing experience.',
-      [
-        m(
-          'Angular or React in a real project',
-          MET,
-          'Personal React budgeting app, deployed on Vercel.',
-        ),
-        m('TypeScript', PARTIAL, 'Lists TypeScript under skills only.'),
-        m(
-          'Git and pull requests',
-          PARTIAL,
-          'GitHub profile linked; no team work described.',
-        ),
-        m(
-          'Responsive CSS',
-          MET,
-          'Hand-built responsive layouts with CSS grid.',
-        ),
-        m('Unit testing', MISSING, 'No testing tools or test work listed.'),
-      ],
-    ),
   },
   {
     id: 105,
     full_name: 'Hana Kim',
     email: 'hana.kim@example.com',
+    job_posting_id: 1,
     posting_title: FRONTEND,
-    kanban_stage: 'Applied',
+    kanban_stage: KanbanStage.APPLIED,
     submitted_at: '2026-10-31T03:30:00Z',
+    has_resume: true,
     screening: null,
-    sample_result: screening(
-      105,
-      40,
-      'Design-focused profile with strong CSS and some React. Little evidence of TypeScript, Git workflow, or code testing.',
-      [
-        m(
-          'Angular or React in a real project',
-          PARTIAL,
-          'React prototypes for a design class.',
-        ),
-        m('TypeScript', MISSING, 'Not mentioned.'),
-        m(
-          'Git and pull requests',
-          PARTIAL,
-          'Shared Figma and code files over GitHub.',
-        ),
-        m(
-          'Responsive CSS',
-          MET,
-          'Responsive landing pages for two student orgs.',
-        ),
-        m(
-          'Unit testing',
-          MISSING,
-          'Lists usability testing only, not code tests.',
-        ),
-      ],
-    ),
   },
   {
     id: 106,
     full_name: 'Kenji Watanabe',
     email: 'kenji.w@example.com',
+    job_posting_id: 2,
     posting_title: QA,
-    kanban_stage: 'Screening',
+    kanban_stage: KanbanStage.SCREENING,
     submitted_at: '2026-10-19T06:50:00Z',
+    has_resume: true,
     screening: screening(
       106,
       63,
@@ -280,9 +225,11 @@ export const SAMPLE_APPLICATIONS: ApplicationRow[] = [
     id: 107,
     full_name: 'Sofia Alvarez',
     email: 'sofia.alvarez@example.com',
+    job_posting_id: 2,
     posting_title: QA,
-    kanban_stage: 'Screening',
+    kanban_stage: KanbanStage.SCREENING,
     submitted_at: '2026-10-18T10:00:00Z',
+    has_resume: true,
     screening: screening(
       107,
       50,
@@ -303,9 +250,11 @@ export const SAMPLE_APPLICATIONS: ApplicationRow[] = [
     id: 108,
     full_name: 'Daniel Okafor',
     email: 'daniel.okafor@example.com',
+    job_posting_id: 2,
     posting_title: QA,
-    kanban_stage: 'Rejected',
+    kanban_stage: KanbanStage.REJECTED,
     submitted_at: '2026-10-17T04:20:00Z',
+    has_resume: true,
     screening: screening(
       108,
       25,

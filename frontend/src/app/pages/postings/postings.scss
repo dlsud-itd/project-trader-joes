@@ -260,7 +260,7 @@
 .item__delete {
   color: var(--tf-danger);
 
-  &:hover:not(:disabled) {
+  &:enabled:hover {
     background: var(--tf-danger-soft);
   }
 }

@@ -5,10 +5,22 @@
   </div>
 </header>
 
-<p class="tf-alert tf-alert--info sample" role="note">
-  Showing sample applicants. This list will load from the API once the
-  applications endpoint is ready.
-</p>
+@if (loadError(); as message) {
+  <div class="tf-alert tf-alert--error load-error" role="alert">
+    <span>{{ message }}</span>
+    <button
+      class="tf-btn tf-btn--ghost tf-btn--sm"
+      type="button"
+      (click)="load()"
+    >
+      Try again
+    </button>
+  </div>
+}
+
+@if (actionError(); as message) {
+  <p class="tf-alert tf-alert--error" role="alert">{{ message }}</p>
+}
 
 <div class="toolbar">
   <label class="search">
@@ -118,16 +130,22 @@
         <span class="row__date">{{ row.submitted_at | date: 'MMM d' }}</span>
       </div>
     } @empty {
-      <div class="empty">
-        <span>No applicants match these filters.</span>
-        <button
-          class="tf-btn tf-btn--ghost tf-btn--sm"
-          type="button"
-          (click)="query.set(''); posting.set('all'); filter.set('all')"
-        >
-          Clear filters
-        </button>
-      </div>
+      @if (isLoading()) {
+        <div class="empty" role="status">Loading applicants…</div>
+      } @else if (!rows().length && !loadError()) {
+        <div class="empty">No one has applied yet.</div>
+      } @else if (rows().length) {
+        <div class="empty">
+          <span>No applicants match these filters.</span>
+          <button
+            class="tf-btn tf-btn--ghost tf-btn--sm"
+            type="button"
+            (click)="query.set(''); posting.set('all'); filter.set('all')"
+          >
+            Clear filters
+          </button>
+        </div>
+      }
     }
   </section>
 
