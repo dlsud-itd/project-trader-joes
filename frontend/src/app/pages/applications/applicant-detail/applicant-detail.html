@@ -24,6 +24,11 @@
       <dd>{{ a.submitted_at | date: 'MMM d, y' }}</dd>
     </div>
   </dl>
+  <a
+    class="tf-btn tf-btn--ghost tf-btn--sm profile__link"
+    [routerLink]="['/applications', a.id]"
+    >View profile &amp; resume</a
+  >
 </div>
 
 <app-fit-score-card

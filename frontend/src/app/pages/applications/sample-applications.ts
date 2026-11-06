@@ -4,6 +4,7 @@ import {
   RequirementMatchLevel,
   ScreeningStatus,
 } from '../../core/ai-screenings';
+import { ResumeSummary } from '../../core/resumes';
 
 /**
  * Sample applicants for the Applications page. The API has no
@@ -21,6 +22,11 @@ export type ApplicationRow = {
   posting_title: string;
   kanban_stage: KanbanStage;
   submitted_at: string;
+  phone: string | null;
+  portfolio_url: string | null;
+  cover_note: string | null;
+  /** Null when the applicant's upload never finished. */
+  resume: ResumeSummary | null;
   screening: AiScreening | null;
   /** What a sample "Score resume" or "Retry" returns. Sample data only. */
   sample_result?: AiScreening;
@@ -28,6 +34,25 @@ export type ApplicationRow = {
 
 const FRONTEND = 'Frontend Developer Intern';
 const QA = 'QA Analyst';
+
+/** Where the sample resume PDFs live, under frontend/public. */
+const SAMPLE_RESUME_DIR = '/sample-resumes';
+
+/** A sample resume, uploaded at the same time as the application. */
+function sampleResume(
+  id: number,
+  file_name: string,
+  size_bytes: number,
+  uploaded_at: string,
+): ResumeSummary {
+  return {
+    id,
+    file_name,
+    size_bytes,
+    uploaded_at,
+    sample_file: `${SAMPLE_RESUME_DIR}/${id}.pdf`,
+  };
+}
 
 const { MET, PARTIAL, MISSING } = RequirementMatchLevel;
 
@@ -78,6 +103,17 @@ export const SAMPLE_APPLICATIONS: ApplicationRow[] = [
     posting_title: FRONTEND,
     kanban_stage: 'Screening',
     submitted_at: '2026-10-21T02:10:00Z',
+    phone: '+63 917 555 0101',
+    portfolio_url: 'https://meilin.dev',
+    cover_note:
+      'I have shipped Angular features at two internships and would love ' +
+      'to keep building tools that recruiters use every day.',
+    resume: sampleResume(
+      101,
+      'Mei-Lin-Chen-Resume.pdf',
+      2331,
+      '2026-10-21T02:10:00Z',
+    ),
     screening: screening(
       101,
       90,
@@ -118,6 +154,16 @@ export const SAMPLE_APPLICATIONS: ApplicationRow[] = [
     posting_title: FRONTEND,
     kanban_stage: 'Applied',
     submitted_at: '2026-10-21T05:42:00Z',
+    phone: '+63 918 555 0102',
+    portfolio_url: 'https://github.com/jonahreyes',
+    cover_note:
+      'Most of my work is React, but I am picking up Angular for this role.',
+    resume: sampleResume(
+      102,
+      'Jonah_Reyes_CV.pdf',
+      2199,
+      '2026-10-21T05:42:00Z',
+    ),
     screening: screening(
       102,
       90,
@@ -154,6 +200,15 @@ export const SAMPLE_APPLICATIONS: ApplicationRow[] = [
     posting_title: FRONTEND,
     kanban_stage: 'Interview',
     submitted_at: '2026-10-20T08:15:00Z',
+    phone: '+63 919 555 0103',
+    portfolio_url: 'https://aisharahman.design',
+    cover_note: null,
+    resume: sampleResume(
+      103,
+      'Aisha Rahman - Resume.pdf',
+      2189,
+      '2026-10-20T08:15:00Z',
+    ),
     screening: screening(
       103,
       70,
@@ -182,6 +237,15 @@ export const SAMPLE_APPLICATIONS: ApplicationRow[] = [
     posting_title: FRONTEND,
     kanban_stage: 'Applied',
     submitted_at: '2026-10-22T01:05:00Z',
+    phone: null,
+    portfolio_url: null,
+    cover_note: 'Looking for my first frontend role after my capstone project.',
+    resume: sampleResume(
+      104,
+      'resume-lucas-martin.pdf',
+      2176,
+      '2026-10-22T01:05:00Z',
+    ),
     screening: failed(104),
     sample_result: screening(
       104,
@@ -215,6 +279,11 @@ export const SAMPLE_APPLICATIONS: ApplicationRow[] = [
     posting_title: FRONTEND,
     kanban_stage: 'Applied',
     submitted_at: '2026-10-31T03:30:00Z',
+    phone: '+63 920 555 0105',
+    portfolio_url: null,
+    cover_note:
+      'My resume upload failed on the careers page. I can send it by email.',
+    resume: null,
     screening: null,
     sample_result: screening(
       105,
@@ -252,6 +321,15 @@ export const SAMPLE_APPLICATIONS: ApplicationRow[] = [
     posting_title: QA,
     kanban_stage: 'Screening',
     submitted_at: '2026-10-19T06:50:00Z',
+    phone: '+63 921 555 0106',
+    portfolio_url: 'https://github.com/kenjiw',
+    cover_note: 'I enjoy breaking things before customers do.',
+    resume: sampleResume(
+      106,
+      'Kenji-Watanabe-QA.pdf',
+      2172,
+      '2026-10-19T06:50:00Z',
+    ),
     screening: screening(
       106,
       63,
@@ -283,6 +361,15 @@ export const SAMPLE_APPLICATIONS: ApplicationRow[] = [
     posting_title: QA,
     kanban_stage: 'Screening',
     submitted_at: '2026-10-18T10:00:00Z',
+    phone: '+63 922 555 0107',
+    portfolio_url: null,
+    cover_note: null,
+    resume: sampleResume(
+      107,
+      'Sofia_Alvarez_Resume.pdf',
+      2189,
+      '2026-10-18T10:00:00Z',
+    ),
     screening: screening(
       107,
       50,
@@ -306,6 +393,16 @@ export const SAMPLE_APPLICATIONS: ApplicationRow[] = [
     posting_title: QA,
     kanban_stage: 'Rejected',
     submitted_at: '2026-10-17T04:20:00Z',
+    phone: null,
+    portfolio_url: 'https://linkedin.com/in/danielokafor',
+    cover_note:
+      'I have three years of support experience and want to move into QA.',
+    resume: sampleResume(
+      108,
+      'Daniel-Okafor.pdf',
+      2156,
+      '2026-10-17T04:20:00Z',
+    ),
     screening: screening(
       108,
       25,
@@ -323,3 +420,18 @@ export const SAMPLE_APPLICATIONS: ApplicationRow[] = [
     ),
   },
 ];
+
+/** What a sample "Score resume" or "Retry" leaves on the row. */
+export function withSampleResult(row: ApplicationRow): ApplicationRow {
+  const previous = row.screening;
+  const result = row.sample_result ?? previous;
+  if (!result) return row;
+  return {
+    ...row,
+    screening: {
+      ...result,
+      retry_count: previous ? previous.retry_count + 1 : 0,
+      screened_at: new Date().toISOString(),
+    },
+  };
+}
