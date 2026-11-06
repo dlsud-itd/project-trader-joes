@@ -3,10 +3,12 @@ import {
   Component,
   computed,
   DestroyRef,
+  effect,
   inject,
   input,
   OnInit,
   signal,
+  untracked,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -14,6 +16,8 @@ import { Title } from '@angular/platform-browser';
 import { RouterLink } from '@angular/router';
 import { finalize, Observable, switchMap, tap } from 'rxjs';
 import { apiErrorMessage } from '../../core/api/api-error';
+import { User, UserRole } from '../../core/auth/auth.models';
+import { AuthService } from '../../core/auth/auth.service';
 import {
   ApplicationInput,
   ApplicationLimit,
@@ -54,7 +58,7 @@ export class Apply implements OnInit {
   private readonly careers = inject(CareersService);
   private readonly title = inject(Title);
   private readonly destroyRef = inject(DestroyRef);
-
+  private readonly auth = inject(AuthService);
   /** From the route: /careers/:id/apply */
   readonly id = input.required<string>();
 
@@ -114,7 +118,15 @@ export class Apply implements OnInit {
       { validators: [Validators.maxLength(ApplicationLimit.COVER_NOTE_MAX)] },
     ],
   });
-
+  constructor() {
+    // After a refresh the session loads a moment later, so wait for it.
+    effect(() => {
+      const user = this.auth.user();
+      if (user?.role === UserRole.APPLICANT) {
+        untracked(() => this.fillFromAccount(user));
+      }
+    });
+  }
   ngOnInit(): void {
     this.load();
   }
@@ -195,7 +207,14 @@ export class Apply implements OnInit {
         error: (err: unknown) => this.showSendError(err),
       });
   }
-
+  /** Starts the form with the account's name and email; both stay editable. */
+  private fillFromAccount(user: User): void {
+    const { full_name, email } = this.form.controls;
+    if (!full_name.value) {
+      full_name.setValue(`${user.first_name} ${user.last_name}`);
+    }
+    if (!email.value) email.setValue(user.email);
+  }
   /** Leaves out optional fields the applicant skipped. */
   private applicationBody(postingId: number): ApplicationInput {
     const { phone, portfolio_url, cover_note, ...required } =
