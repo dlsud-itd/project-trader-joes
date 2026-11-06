@@ -1,0 +1,76 @@
+<div class="board" cdkDropListGroup>
+  @for (column of columns(); track column.stage) {
+    <section class="column" [attr.aria-label]="column.stage">
+      <header class="column__head">
+        <span class="tf-stage" [class]="'tf-stage--' + column.stage">{{
+          column.stage
+        }}</span>
+        <span class="column__count">{{ column.rows.length }}</span>
+      </header>
+
+      <div
+        class="column__cards"
+        cdkDropList
+        cdkDropListSortingDisabled
+        [cdkDropListData]="column.stage"
+        [cdkDropListDisabled]="!canMove()"
+        (cdkDropListDropped)="drop($event)"
+      >
+        @for (row of column.rows; track row.id) {
+          <article
+            class="card"
+            cdkDrag
+            [cdkDragData]="row"
+            [cdkDragDisabled]="!canMove() || isMoving(row.id)"
+            [class.is-moving]="isMoving(row.id)"
+          >
+            <div class="card__who">
+              <span class="avatar" aria-hidden="true">{{
+                initials(row.full_name)
+              }}</span>
+              <span class="card__text">
+                <a class="card__name" [routerLink]="[profilePath, row.id]">
+                  {{ row.full_name }}
+                </a>
+                <span class="card__sub">{{ row.posting_title }}</span>
+              </span>
+            </div>
+
+            <div class="card__foot">
+              <app-fit-score-badge
+                variant="pill"
+                [score]="row.screening?.fit_score"
+                [status]="row.screening?.status"
+              />
+              <span class="card__date">{{
+                row.submitted_at | date: dateFormat
+              }}</span>
+            </div>
+
+            @if (canMove()) {
+              <!-- Keyboard and touch alternative to dragging -->
+              <select
+                #stageMenu
+                class="card__move"
+                [attr.aria-label]="'Stage for ' + row.full_name"
+                [disabled]="isMoving(row.id)"
+                (change)="pickStage(row, stageMenu.value)"
+              >
+                @for (stage of stages; track stage) {
+                  <option
+                    [value]="stage"
+                    [selected]="stage === row.kanban_stage"
+                  >
+                    {{ stage }}
+                  </option>
+                }
+              </select>
+            }
+          </article>
+        } @empty {
+          <p class="column__empty">No applicants</p>
+        }
+      </div>
+    </section>
+  }
+</div>

@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { AppPath } from './core/app-paths';
 import {
   authGuard,
   guestGuard,
@@ -7,6 +8,10 @@ import {
 } from './core/auth/auth.guards';
 import { UserRole } from './core/auth/auth.models';
 import { unsavedChangesGuard } from './core/job-postings';
+import { BOARD_VIEW_QUERY } from './pages/applications/applications-view';
+
+/** Where the old /pipeline link now goes. */
+const BOARD_VIEW_URL = `${AppPath.APPLICATIONS}?${BOARD_VIEW_QUERY}`;
 
 export const routes: Routes = [
   {
@@ -104,6 +109,11 @@ export const routes: Routes = [
           import('./pages/applications/applications').then(
             (m) => m.Applications,
           ),
+      },
+      {
+        // The pipeline board is now the Board view of Applications.
+        path: 'pipeline',
+        redirectTo: BOARD_VIEW_URL,
       },
       {
         path: 'applications/:id',

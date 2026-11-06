@@ -1,0 +1,28 @@
+<div class="views" role="group" aria-label="View">
+  <button
+    type="button"
+    class="views__btn"
+    [class.is-active]="view() === ApplicationsView.LIST"
+    [attr.aria-pressed]="view() === ApplicationsView.LIST"
+    (click)="viewChange.emit(ApplicationsView.LIST)"
+  >
+    <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true">
+      <path d="M4 5.5h12M4 10h12M4 14.5h12" />
+    </svg>
+    List
+  </button>
+  <button
+    type="button"
+    class="views__btn"
+    [class.is-active]="view() === ApplicationsView.BOARD"
+    [attr.aria-pressed]="view() === ApplicationsView.BOARD"
+    (click)="viewChange.emit(ApplicationsView.BOARD)"
+  >
+    <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true">
+      <rect x="3" y="3.5" width="4" height="13" rx="1" />
+      <rect x="8" y="3.5" width="4" height="9" rx="1" />
+      <rect x="13" y="3.5" width="4" height="11" rx="1" />
+    </svg>
+    Board
+  </button>
+</div>

@@ -10,6 +10,22 @@ export enum KanbanStage {
   REJECTED = 'Rejected',
 }
 
+/** Every stage, in board order (one board column each). */
+export const KANBAN_STAGES: readonly KanbanStage[] = Object.values(KanbanStage);
+
+/** The saved stage from PATCH /api/applications/:id/stage. */
+export type StageUpdate = {
+  id: number;
+  kanban_stage: KanbanStage;
+  updated_at: string;
+};
+
+/** Response body of PATCH /api/applications/:id/stage. */
+export type StageUpdateResponse = {
+  message: string;
+  application: StageUpdate;
+};
+
 /** One application in GET /api/applications and /api/applications/:id. */
 export type ApplicationRow = {
   id: number;
