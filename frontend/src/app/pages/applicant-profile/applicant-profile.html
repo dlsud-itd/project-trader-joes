@@ -1,0 +1,108 @@
+<a class="back" routerLink="/applications"
+  ><span aria-hidden="true">←</span> All applications</a
+>
+
+@if (isLoading()) {
+  <p class="loading-page" role="status">Loading applicant…</p>
+} @else if (loadError(); as message) {
+  <div class="tf-alert tf-alert--error" role="alert">
+    <span>{{ message }}</span>
+    <button
+      class="tf-btn tf-btn--ghost tf-btn--sm"
+      type="button"
+      (click)="load()"
+    >
+      Try again
+    </button>
+  </div>
+} @else if (application(); as a) {
+  <header class="hero">
+    <span class="avatar" aria-hidden="true">{{ initials() }}</span>
+    <div class="hero__text">
+      <h1>{{ a.full_name }}</h1>
+      <p>
+        Applied for <strong>{{ a.posting_title }}</strong> on
+        {{ a.submitted_at | date: 'MMM d, y' }}
+      </p>
+    </div>
+    <div class="hero__side">
+      <span class="tf-stage" [class]="'tf-stage--' + a.kanban_stage">{{
+        a.kanban_stage
+      }}</span>
+      <a class="tf-btn tf-btn--ghost tf-btn--sm" [href]="'mailto:' + a.email"
+        >Email applicant</a
+      >
+    </div>
+  </header>
+
+  <div class="layout">
+    <div class="side">
+      <section class="card" aria-labelledby="contact-title">
+        <h2 id="contact-title">Contact</h2>
+        <dl class="contact">
+          <div>
+            <dt>Email</dt>
+            <dd>
+              <a [href]="'mailto:' + a.email">{{ a.email }}</a>
+            </dd>
+          </div>
+          <div>
+            <dt>Phone</dt>
+            <dd>
+              @if (a.phone) {
+                <a [href]="'tel:' + a.phone">{{ a.phone }}</a>
+              } @else {
+                <span class="none">Not given</span>
+              }
+            </dd>
+          </div>
+          <div>
+            <dt>Portfolio</dt>
+            <dd>
+              @if (a.portfolio_url) {
+                <a [href]="a.portfolio_url" target="_blank" rel="noopener">{{
+                  displayUrl(a.portfolio_url)
+                }}</a>
+              } @else {
+                <span class="none">Not given</span>
+              }
+            </dd>
+          </div>
+        </dl>
+      </section>
+
+      <section class="card" aria-labelledby="note-title">
+        <h2 id="note-title">Cover note</h2>
+        @if (a.cover_note) {
+          <p class="note">{{ a.cover_note }}</p>
+        } @else {
+          <p class="none">The applicant didn’t add a note.</p>
+        }
+      </section>
+
+      @if (actionError(); as message) {
+        <p class="tf-alert tf-alert--error" role="alert">{{ message }}</p>
+      }
+      <app-fit-score-card
+        [screening]="a.screening"
+        [busy]="isScoring()"
+        (run)="score()"
+        (retry)="score()"
+      />
+    </div>
+
+    <app-resume-viewer
+      class="viewer"
+      [resume]="a.resume"
+      [applicantName]="a.full_name"
+    />
+  </div>
+} @else {
+  <section class="missing">
+    <h1>Applicant not found</h1>
+    <p>This application may have been removed, or the link is wrong.</p>
+    <a class="tf-btn tf-btn--primary" routerLink="/applications"
+      >Back to applications</a
+    >
+  </section>
+}

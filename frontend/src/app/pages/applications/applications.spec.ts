@@ -4,6 +4,7 @@ import {
   provideHttpClientTesting,
 } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { environment } from '../../../environments/environment';
 import {
   AiScreening,
@@ -19,6 +20,21 @@ const SCREEN_URL = `${environment.apiUrl}/ai-screenings`;
 
 const byName = (name: string) =>
   TEST_APPLICATIONS.find((r) => r.full_name === name) as ApplicationRow;
+
+/** Hana is the one applicant not screened yet; here she has a resume too. */
+const WITH_HANA_RESUME: ApplicationRow[] = TEST_APPLICATIONS.map((r) =>
+  r.full_name === 'Hana Kim'
+    ? {
+        ...r,
+        resume: {
+          id: 105,
+          file_name: 'Hana-Kim.pdf',
+          size_bytes: 2048,
+          uploaded_at: r.submitted_at,
+        },
+      }
+    : r,
+);
 
 describe('fitGroup', () => {
   it('groups by fit tier, and unscored when there is no score', () => {
@@ -69,10 +85,15 @@ describe('Applications', () => {
     screened_at: '2026-11-06T01:00:00Z',
   });
 
-  async function render(list: ApplicationRow[] = TEST_APPLICATIONS) {
+  async function render(list: ApplicationRow[] = WITH_HANA_RESUME) {
     TestBed.configureTestingModule({
       imports: [Applications],
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        // The detail panel links to the applicant's profile page.
+        provideRouter([]),
+      ],
     });
     fixture = TestBed.createComponent(Applications);
     http = TestBed.inject(HttpTestingController);
@@ -95,7 +116,12 @@ describe('Applications', () => {
   it('shows a loading message, then an error with a retry', async () => {
     TestBed.configureTestingModule({
       imports: [Applications],
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        // The detail panel links to the applicant's profile page.
+        provideRouter([]),
+      ],
     });
     fixture = TestBed.createComponent(Applications);
     http = TestBed.inject(HttpTestingController);
@@ -217,8 +243,7 @@ describe('Applications', () => {
   });
 
   it('does not score an applicant without a resume', async () => {
-    const noResume = { ...byName('Hana Kim'), has_resume: false };
-    await render([noResume]);
+    await render([byName('Hana Kim')]); // no resume uploaded
     scoreFromCard('Hana Kim', 'Score resume');
 
     http.expectNone(SCREEN_URL);

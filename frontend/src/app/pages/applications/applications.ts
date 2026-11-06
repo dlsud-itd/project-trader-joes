@@ -10,16 +10,14 @@ import {
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { catchError, finalize, map, Observable, throwError } from 'rxjs';
+import { finalize } from 'rxjs';
 import {
   AiScreening,
-  AiScreeningResponse,
   AiScreeningsService,
   FIT_TIER_LABEL,
   FitTier,
   fitTier,
   ScreeningStatus,
-  screeningFailure,
 } from '../../core/ai-screenings';
 import { apiErrorMessage } from '../../core/api/api-error';
 import { ApplicationRow, ApplicationsService } from '../../core/applications';
@@ -40,8 +38,8 @@ export function fitGroup(row: ApplicationRow): Exclude<FitFilter, 'all'> {
 }
 
 const LOAD_FAILED_MESSAGE = 'Could not load applicants.';
-const SCORE_FAILED_MESSAGE = 'Could not score this resume. Try again.';
-const NO_RESUME_MESSAGE =
+export const SCORE_FAILED_MESSAGE = 'Could not score this resume. Try again.';
+export const NO_RESUME_MESSAGE =
   'This applicant has not uploaded a resume yet, so it cannot be scored.';
 
 /**
@@ -173,31 +171,19 @@ export class Applications implements OnInit {
     return this.scoring().has(id);
   }
 
-  /**
-   * Screens the resume: a first screening if there is none yet, otherwise a
-   * retry (after a failure, or Re-score). Each call uses Gemini quota.
-   */
+  /** Score resume / Re-score / Retry for one row. */
   protected score(row: ApplicationRow): void {
     if (this.isScoring(row.id)) return;
     this.actionError.set(null);
-    if (!row.has_resume) {
+    if (!row.resume) {
       this.actionError.set(NO_RESUME_MESSAGE);
       return;
     }
     this.setScoring(row.id, true);
 
-    const request: Observable<AiScreeningResponse> = row.screening
-      ? this.screeningsApi.retry(row.id)
-      : this.screeningsApi.screen(row.id);
-    request
+    this.screeningsApi
+      .screenOrRetry(row.id, row.screening !== null)
       .pipe(
-        map((res: AiScreeningResponse) => res.screening),
-        // A failed screening is saved; load it so the card shows why.
-        catchError((err: unknown) =>
-          screeningFailure(err)
-            ? this.screeningsApi.get(row.id)
-            : throwError(() => err),
-        ),
         finalize(() => this.setScoring(row.id, false)),
         takeUntilDestroyed(this.destroyRef),
       )

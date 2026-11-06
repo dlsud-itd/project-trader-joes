@@ -5,14 +5,30 @@ import {
   ScreeningStatus,
 } from '../../core/ai-screenings';
 import { ApplicationRow, KanbanStage } from '../../core/applications';
+import { ResumeSummary } from '../../core/resumes';
 
 /**
- * Applicants for the Applications page tests: three fit tiers, one failed
- * screening, and one not screened yet.
+ * Applicants for the Applications and profile page tests: three fit tiers,
+ * one failed screening, one not screened yet, and one without a resume.
  */
 
 const FRONTEND = 'Frontend Developer Intern';
 const QA = 'QA Analyst';
+
+/** A resume uploaded at the same time as the application. */
+function resume(
+  id: number,
+  file_name: string,
+  size_bytes: number,
+  uploaded_at: string,
+): ResumeSummary {
+  return {
+    id,
+    file_name,
+    size_bytes,
+    uploaded_at,
+  };
+}
 
 const { MET, PARTIAL, MISSING } = RequirementMatchLevel;
 
@@ -64,7 +80,17 @@ export const TEST_APPLICATIONS: ApplicationRow[] = [
     posting_title: FRONTEND,
     kanban_stage: KanbanStage.SCREENING,
     submitted_at: '2026-10-21T02:10:00Z',
-    has_resume: true,
+    phone: '+63 917 555 0101',
+    portfolio_url: 'https://meilin.dev',
+    cover_note:
+      'I have shipped Angular features at two internships and would love ' +
+      'to keep building tools that recruiters use every day.',
+    resume: resume(
+      101,
+      'Mei-Lin-Chen-Resume.pdf',
+      2331,
+      '2026-10-21T02:10:00Z',
+    ),
     screening: screening(
       101,
       90,
@@ -106,7 +132,11 @@ export const TEST_APPLICATIONS: ApplicationRow[] = [
     posting_title: FRONTEND,
     kanban_stage: KanbanStage.APPLIED,
     submitted_at: '2026-10-21T05:42:00Z',
-    has_resume: true,
+    phone: '+63 918 555 0102',
+    portfolio_url: 'https://github.com/jonahreyes',
+    cover_note:
+      'Most of my work is React, but I am picking up Angular for this role.',
+    resume: resume(102, 'Jonah_Reyes_CV.pdf', 2199, '2026-10-21T05:42:00Z'),
     screening: screening(
       102,
       90,
@@ -144,7 +174,15 @@ export const TEST_APPLICATIONS: ApplicationRow[] = [
     posting_title: FRONTEND,
     kanban_stage: KanbanStage.INTERVIEW,
     submitted_at: '2026-10-20T08:15:00Z',
-    has_resume: true,
+    phone: '+63 919 555 0103',
+    portfolio_url: 'https://aisharahman.design',
+    cover_note: null,
+    resume: resume(
+      103,
+      'Aisha Rahman - Resume.pdf',
+      2189,
+      '2026-10-20T08:15:00Z',
+    ),
     screening: screening(
       103,
       70,
@@ -174,7 +212,15 @@ export const TEST_APPLICATIONS: ApplicationRow[] = [
     posting_title: FRONTEND,
     kanban_stage: KanbanStage.APPLIED,
     submitted_at: '2026-10-22T01:05:00Z',
-    has_resume: true,
+    phone: null,
+    portfolio_url: null,
+    cover_note: 'Looking for my first frontend role after my capstone project.',
+    resume: resume(
+      104,
+      'resume-lucas-martin.pdf',
+      2176,
+      '2026-10-22T01:05:00Z',
+    ),
     screening: failed(104),
   },
   {
@@ -185,7 +231,11 @@ export const TEST_APPLICATIONS: ApplicationRow[] = [
     posting_title: FRONTEND,
     kanban_stage: KanbanStage.APPLIED,
     submitted_at: '2026-10-31T03:30:00Z',
-    has_resume: true,
+    phone: '+63 920 555 0105',
+    portfolio_url: null,
+    cover_note:
+      'My resume upload failed on the careers page. I can send it by email.',
+    resume: null,
     screening: null,
   },
   {
@@ -196,7 +246,10 @@ export const TEST_APPLICATIONS: ApplicationRow[] = [
     posting_title: QA,
     kanban_stage: KanbanStage.SCREENING,
     submitted_at: '2026-10-19T06:50:00Z',
-    has_resume: true,
+    phone: '+63 921 555 0106',
+    portfolio_url: 'https://github.com/kenjiw',
+    cover_note: 'I enjoy breaking things before customers do.',
+    resume: resume(106, 'Kenji-Watanabe-QA.pdf', 2172, '2026-10-19T06:50:00Z'),
     screening: screening(
       106,
       63,
@@ -229,7 +282,15 @@ export const TEST_APPLICATIONS: ApplicationRow[] = [
     posting_title: QA,
     kanban_stage: KanbanStage.SCREENING,
     submitted_at: '2026-10-18T10:00:00Z',
-    has_resume: true,
+    phone: '+63 922 555 0107',
+    portfolio_url: null,
+    cover_note: null,
+    resume: resume(
+      107,
+      'Sofia_Alvarez_Resume.pdf',
+      2189,
+      '2026-10-18T10:00:00Z',
+    ),
     screening: screening(
       107,
       50,
@@ -254,7 +315,11 @@ export const TEST_APPLICATIONS: ApplicationRow[] = [
     posting_title: QA,
     kanban_stage: KanbanStage.REJECTED,
     submitted_at: '2026-10-17T04:20:00Z',
-    has_resume: true,
+    phone: null,
+    portfolio_url: 'https://linkedin.com/in/danielokafor',
+    cover_note:
+      'I have three years of support experience and want to move into QA.',
+    resume: resume(108, 'Daniel-Okafor.pdf', 2156, '2026-10-17T04:20:00Z'),
     screening: screening(
       108,
       25,

@@ -176,6 +176,8 @@ describe('Applications (e2e)', () => {
       application_id: created.id,
       full_name: 'E2E List Applicant',
       email,
+      phone: '+63 917 000 0000',
+      cover_note: 'Hello from the list test.',
     });
     return created.id;
   };
@@ -222,18 +224,46 @@ describe('Applications (e2e)', () => {
       posting_title: 'E2E Applications open',
       full_name: 'E2E List Applicant',
       email: 'e2e.list.plain@example.com',
+      phone: '+63 917 000 0000',
+      portfolio_url: null,
+      cover_note: 'Hello from the list test.',
       kanban_stage: 'Applied',
-      has_resume: false,
+      resume: null,
       screening: null,
     });
     expect(plain.submitted_at).toEqual(expect.any(String));
     expect(scored).toMatchObject({
-      has_resume: true,
+      resume: { file_name: 'cv.pdf', size_bytes: 8 },
       screening: { fit_score: 75, status: 'completed', retry_count: 0 },
     });
+    expect(scored.resume.id).toEqual(expect.any(Number));
     expect(scored.screening.requirement_matches).toHaveLength(2);
-    // Contact details beyond name and email stay out of the list.
-    expect(plain).not.toHaveProperty('phone');
+    // The file itself is downloaded separately, never sent in the list.
+    expect(scored.resume).not.toHaveProperty('data');
+  });
+
+  it('returns one application for the profile page', async () => {
+    const id = await addApplication('e2e.list.one@example.com');
+    const { body } = await api()
+      .get(`/api/applications/${id}`)
+      .set(manager)
+      .expect(200);
+    expect(body).toMatchObject({
+      id,
+      email: 'e2e.list.one@example.com',
+      posting_title: 'E2E Applications open',
+      resume: null,
+      screening: null,
+    });
+  });
+
+  it('returns 404 for an unknown or non-numeric application id', async () => {
+    const { body } = await api()
+      .get('/api/applications/999999999')
+      .set(manager)
+      .expect(404);
+    expect(body.error).toBe('Application not found.');
+    await api().get('/api/applications/abc').set(manager).expect(404);
   });
 
   it('lists the newest application first', async () => {
@@ -265,6 +295,7 @@ describe('Applications (e2e)', () => {
     const asApplicant = await signIn(applicantEmail, 'Password123');
 
     await api().get('/api/applications').set(asApplicant).expect(403);
+    await api().get('/api/applications/1').set(asApplicant).expect(403);
     // Applicants can't run or read AI screenings either.
     await api()
       .post('/api/ai-screenings')

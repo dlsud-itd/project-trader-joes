@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ApplicationRow } from './applications.models';
 
-/** Calls GET /api/applications. Staff only on the API side. */
+/** Calls /api/applications. Listing and viewing are staff only. */
 @Injectable({ providedIn: 'root' })
 export class ApplicationsService {
   private readonly http = inject(HttpClient);
@@ -13,5 +13,10 @@ export class ApplicationsService {
   /** Every application, newest first, with its AI screening. */
   list(): Observable<ApplicationRow[]> {
     return this.http.get<ApplicationRow[]>(this.api);
+  }
+
+  /** One application, for the profile page; 404 when it doesn't exist. */
+  get(id: number): Observable<ApplicationRow> {
+    return this.http.get<ApplicationRow>(`${this.api}/${id}`);
   }
 }

@@ -1,9 +1,23 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  NotFoundException,
+  Param,
+  ParseIntPipe,
+  Post,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Public } from '../common/decorators/public.decorator.js';
 import { Roles } from '../common/decorators/roles.decorator.js';
 import { ApplicationsService } from './applications.service.js';
 import { CreateApplicationDto } from './dto/create-application.dto.js';
+
+/** A non-numeric id can't match an application, so treat it as not found. */
+const applicationId = () =>
+  new ParseIntPipe({
+    exceptionFactory: () => new NotFoundException('Application not found.'),
+  });
 
 /**
  * Applications (API spec IV).
@@ -24,6 +38,14 @@ export class ApplicationsController {
   @Get()
   list() {
     return this.applications.list();
+  }
+
+  /** GET /api/applications/:id — one application, for the profile page. */
+  @ApiBearerAuth()
+  @Roles('manager', 'recruiter')
+  @Get(':id')
+  findOne(@Param('id', applicationId()) id: number) {
+    return this.applications.findOne(id);
   }
 
   /**

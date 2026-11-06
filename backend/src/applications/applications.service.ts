@@ -18,20 +18,62 @@ import {
 import type { CreateApplicationDto } from './dto/create-application.dto.js';
 import { signUploadToken } from '../common/upload-token/upload-token.js';
 
-/** One row of GET /api/applications. */
+/** One application in GET /api/applications and /api/applications/:id. */
 export type ApplicationListItem = {
   id: number;
   job_posting_id: number;
   posting_title: string;
   full_name: string;
   email: string;
+  phone: string | null;
+  portfolio_url: string | null;
+  cover_note: string | null;
   kanban_stage: KanbanStage;
   submitted_at: Date;
-  /** False until the resume upload finishes; screening needs it. */
-  has_resume: boolean;
+  /**
+   * The uploaded file, without its bytes (download it from
+   * /api/resumes/:id/file). Null until the upload finishes.
+   */
+  resume: {
+    id: number;
+    file_name: string;
+    size_bytes: number;
+    uploaded_at: Date;
+  } | null;
   /** Null until the resume has been screened. */
   screening: AiScreening | null;
 };
+
+/** What to read for each application, shared by the list and one-item views. */
+const listQuery = {
+  columns: {
+    id: true,
+    job_posting_id: true,
+    kanban_stage: true,
+    submitted_at: true,
+  },
+  with: {
+    posting: { columns: { title: true } },
+    profile: {
+      columns: {
+        full_name: true,
+        email: true,
+        phone: true,
+        portfolio_url: true,
+        cover_note: true,
+      },
+    },
+    resume: {
+      columns: {
+        id: true,
+        file_name: true,
+        size_bytes: true,
+        uploaded_at: true,
+      },
+    },
+    screening: true,
+  },
+} as const;
 
 @Injectable()
 export class ApplicationsService {
@@ -43,35 +85,24 @@ export class ApplicationsService {
   /** Every application, newest first, for the staff Applications page. */
   async list(): Promise<ApplicationListItem[]> {
     const rows = await this.db.query.applications.findMany({
-      columns: {
-        id: true,
-        job_posting_id: true,
-        kanban_stage: true,
-        submitted_at: true,
-      },
-      with: {
-        posting: { columns: { title: true } },
-        profile: { columns: { full_name: true, email: true } },
-        resume: { columns: { id: true } },
-        screening: true,
-      },
+      ...listQuery,
       orderBy: [desc(applications.submitted_at), desc(applications.id)],
     });
-    // Applying saves the profile in the same transaction, so every row has one.
-    return rows.flatMap(({ posting, profile, resume, screening, ...row }) =>
-      profile
-        ? [
-            {
-              ...row,
-              posting_title: posting.title,
-              full_name: profile.full_name,
-              email: profile.email,
-              has_resume: resume !== null,
-              screening: screening ?? null,
-            },
-          ]
-        : [],
-    );
+    return rows.flatMap((row) => {
+      const item = toListItem(row);
+      return item ? [item] : [];
+    });
+  }
+
+  /** One application, for the applicant profile page. */
+  async findOne(id: number): Promise<ApplicationListItem> {
+    const row = await this.db.query.applications.findFirst({
+      ...listQuery,
+      where: eq(applications.id, id),
+    });
+    const item = row && toListItem(row);
+    if (!item) throw new NotFoundException('Application not found.');
+    return item;
   }
 
   /**
@@ -134,4 +165,43 @@ export class ApplicationsService {
       ),
     };
   }
+}
+
+/** An application as read with `listQuery`. */
+type ListRow = Omit<
+  ApplicationListItem,
+  | 'posting_title'
+  | 'full_name'
+  | 'email'
+  | 'phone'
+  | 'portfolio_url'
+  | 'cover_note'
+  | 'resume'
+  | 'screening'
+> & {
+  posting: { title: string };
+  profile: Pick<
+    ApplicationListItem,
+    'full_name' | 'email' | 'phone' | 'portfolio_url' | 'cover_note'
+  > | null;
+  resume: ApplicationListItem['resume'] | undefined;
+  screening: AiScreening | null | undefined;
+};
+
+function toListItem({
+  posting,
+  profile,
+  resume,
+  screening,
+  ...row
+}: ListRow): ApplicationListItem | null {
+  // Applying saves the profile in the same transaction, so every row has one.
+  if (!profile) return null;
+  return {
+    ...row,
+    posting_title: posting.title,
+    ...profile,
+    resume: resume ?? null,
+    screening: screening ?? null,
+  };
 }

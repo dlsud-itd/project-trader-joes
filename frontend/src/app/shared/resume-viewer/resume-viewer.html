@@ -1,0 +1,110 @@
+@let r = resume();
+
+<header class="bar">
+  <span class="bar__icon" aria-hidden="true">
+    <svg viewBox="0 0 20 20" width="18" height="18">
+      <path
+        d="M5 2.5h6.5L15.5 6.5v11h-10.5z"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.5"
+        stroke-linejoin="round"
+      />
+      <path
+        d="M11.5 2.5v4h4"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.5"
+        stroke-linejoin="round"
+      />
+    </svg>
+  </span>
+
+  <div class="bar__text">
+    <h2>Resume</h2>
+    @if (r) {
+      <p>
+        <span class="bar__name" [title]="r.file_name">{{ r.file_name }}</span>
+        <span class="bar__meta"
+          >PDF · {{ fileSize() }} · Uploaded
+          {{ r.uploaded_at | date: 'MMM d, y' }}</span
+        >
+      </p>
+    } @else {
+      <p>No file on record</p>
+    }
+  </div>
+
+  @if (r && fileUrl(); as url) {
+    <div class="bar__actions">
+      <a
+        class="tf-btn tf-btn--ghost tf-btn--sm"
+        [href]="url"
+        target="_blank"
+        rel="noopener"
+      >
+        Open in new tab
+      </a>
+      <a
+        class="tf-btn tf-btn--primary tf-btn--sm"
+        [href]="url"
+        [attr.download]="r.file_name"
+      >
+        Download
+      </a>
+    </div>
+  }
+</header>
+
+<div class="stage">
+  @if (!r) {
+    <div class="state">
+      <span class="state__icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="26" height="26">
+          <path
+            d="M6 3h8l4 4v14H6z M14 3v4h4 M9 13h6 M9 17h4"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linejoin="round"
+            stroke-linecap="round"
+          />
+        </svg>
+      </span>
+      <h3>No resume uploaded</h3>
+      <p>
+        The application went through, but the resume upload didn’t finish. Reach
+        out to the applicant by email to ask for it.
+      </p>
+    </div>
+  } @else if (file.isLoading()) {
+    <div class="loading" aria-busy="true" aria-label="Loading resume">
+      <div class="sheet">
+        <span class="line line--title"></span>
+        <span class="line line--short"></span>
+        <span class="line"></span>
+        <span class="line"></span>
+        <span class="line line--mid"></span>
+        <span class="line"></span>
+        <span class="line line--short"></span>
+      </div>
+    </div>
+  } @else if (errorMessage(); as message) {
+    <div class="state">
+      <div class="tf-alert tf-alert--error" role="alert">{{ message }}</div>
+      <button
+        class="tf-btn tf-btn--ghost tf-btn--sm"
+        type="button"
+        (click)="reload()"
+      >
+        Try again
+      </button>
+    </div>
+  } @else if (viewerUrl(); as src) {
+    <iframe
+      class="frame"
+      [src]="src"
+      [title]="'Resume of ' + (applicantName() || r.file_name)"
+    ></iframe>
+  }
+</div>
