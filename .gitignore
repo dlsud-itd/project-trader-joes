@@ -6,6 +6,9 @@ dist/
 .angular/
 coverage/
 
+# Database backups (npm run db:backup): personal data, never commit
+backups/
+
 # Environment files (copy .env.example instead)
 .env
 .env.*

@@ -95,7 +95,25 @@ Open http://localhost:4200 and sign in with a sample account. API docs are at ht
 | backend | `npm run db:generate` | Creates a migration after you change `src/database/schema.ts` |
 | backend | `npm run db:migrate` | Applies migrations and seeds sample accounts if empty |
 | backend | `npm run db:studio` | Opens a browser view of the database |
+| backend | `npm run db:backup` | Saves a full copy of the database to `backend/backups/` |
+| backend | `npm run db:restore -- <file> --yes` | Replaces the database with a backup |
 | backend | `npm run test:e2e` | API tests against the database in `.env` |
+
+## Database backups
+
+The live database is on Neon. To keep a copy of it:
+
+1. Put the live `DATABASE_URL` in `backend/.env` (it's in Render's environment variables).
+2. Run `npm run db:backup --prefix backend`. It saves `backend/backups/talentflow-<date>.json` with every table, including the resume files.
+3. Keep the file somewhere private, like a team Google Drive folder. **It contains applicants' personal data and password hashes**, so never commit it, post it, or send it in a group chat. `backups/` is in `.gitignore`.
+
+To restore, preferably into a fresh database such as a new Neon branch:
+
+1. Point `DATABASE_URL` at that database and run `npm run db:migrate --prefix backend`. The restore only runs if the database is on the same migration as the backup.
+2. Run `npm run db:restore --prefix backend -- backups/talentflow-<date>.json`. It shows what it will replace and changes nothing yet.
+3. Run the same command with `--yes` at the end. It deletes everything in that database and puts the backup back in one step, so it either fully works or changes nothing.
+
+Make a backup before risky changes (like a big migration) and at the end of each sprint.
 
 ## API (Sprint 1)
 
