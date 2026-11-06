@@ -5,6 +5,9 @@ import { finalize, from, switchMap } from 'rxjs';
 import { apiErrorMessage } from '../../core/api/api-error';
 import { AppPath } from '../../core/app-paths';
 import { AuthService } from '../../core/auth/auth.service';
+import { notBlank } from '../../shared/validators';
+
+const NAME_MAX_LENGTH = 100;
 
 @Component({
   selector: 'app-applicant-register',
@@ -21,8 +24,26 @@ export class ApplicantRegister {
   readonly showPassword = signal(false);
 
   readonly form = inject(FormBuilder).nonNullable.group({
-    first_name: ['', [Validators.required, Validators.maxLength(100)]],
-    last_name: ['', [Validators.required, Validators.maxLength(100)]],
+    first_name: [
+      '',
+      {
+        validators: [
+          Validators.required,
+          notBlank,
+          Validators.maxLength(NAME_MAX_LENGTH),
+        ],
+      },
+    ],
+    last_name: [
+      '',
+      {
+        validators: [
+          Validators.required,
+          notBlank,
+          Validators.maxLength(NAME_MAX_LENGTH),
+        ],
+      },
+    ],
     email: ['', [Validators.required, Validators.email]],
     password: [
       '',
@@ -47,9 +68,14 @@ export class ApplicantRegister {
     }
     this.submitting.set(true);
     this.error.set(null);
-    const { email, password } = this.form.getRawValue();
+    const { first_name, last_name, email, password } = this.form.getRawValue();
     this.auth
-      .registerApplicant(this.form.getRawValue())
+      .registerApplicant({
+        first_name: first_name.trim(),
+        last_name: last_name.trim(),
+        email,
+        password,
+      })
       .pipe(
         switchMap(() => this.auth.login({ email, password })),
         switchMap(() => from(this.router.navigateByUrl(AppPath.CAREERS))),

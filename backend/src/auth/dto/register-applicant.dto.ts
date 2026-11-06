@@ -1,3 +1,4 @@
+import { Transform } from 'class-transformer';
 import {
   IsEmail,
   IsString,
@@ -5,7 +6,9 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
+import { trim } from '../../common/transforms/trim.js';
 
+const NAME_MAX_LENGTH = 100;
 /**
  * Public self-registration for applicants. Role is always 'applicant'; it is
  * not a field here.
@@ -21,13 +24,19 @@ export class RegisterApplicantDto {
   })
   password: string;
 
+  @Transform(trim)
   @IsString()
   @MinLength(1, { message: 'Enter a first name.' })
-  @MaxLength(100)
+  @MaxLength(NAME_MAX_LENGTH, {
+    message: `First name must be ${NAME_MAX_LENGTH} characters or fewer.`,
+  })
   first_name: string;
 
+  @Transform(trim)
   @IsString()
   @MinLength(1, { message: 'Enter a last name.' })
-  @MaxLength(100)
+  @MaxLength(NAME_MAX_LENGTH, {
+    message: `Last name must be ${NAME_MAX_LENGTH} characters or fewer.`,
+  })
   last_name: string;
 }

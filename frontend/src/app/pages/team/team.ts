@@ -13,6 +13,7 @@ import {
 } from '../../core/auth/auth.models';
 import { AuthService } from '../../core/auth/auth.service';
 import { UsersService } from '../../core/users';
+import { notBlank } from '../../shared/validators';
 
 type RoleOption = {
   value: StaffRole;
@@ -64,6 +65,7 @@ export class Team implements OnInit {
       {
         validators: [
           Validators.required,
+          notBlank,
           Validators.maxLength(NAME_MAX_LENGTH),
         ],
       },
@@ -73,6 +75,7 @@ export class Team implements OnInit {
       {
         validators: [
           Validators.required,
+          notBlank,
           Validators.maxLength(NAME_MAX_LENGTH),
         ],
       },
@@ -117,8 +120,13 @@ export class Team implements OnInit {
     }
     this.isSaving.set(true);
     this.errorMessage.set(null);
+    const { first_name, last_name, ...account } = this.form.getRawValue();
     this.auth
-      .register(this.form.getRawValue())
+      .register({
+        ...account,
+        first_name: first_name.trim(),
+        last_name: last_name.trim(),
+      })
       .pipe(finalize(() => this.isSaving.set(false)))
       .subscribe({
         next: ({ user }: RegisterResponse) => {

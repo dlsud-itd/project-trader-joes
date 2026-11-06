@@ -7,6 +7,8 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
 import { environment } from '../../../environments/environment';
+import { User, UserRole } from '../../core/auth/auth.models';
+import { AuthService } from '../../core/auth/auth.service';
 import { PublicJobPosting } from '../../core/careers';
 import { JobPostingStatus } from '../../core/job-postings';
 import { Apply } from './apply';
@@ -81,7 +83,46 @@ describe('Apply page', () => {
     await settle();
   });
 
-  afterEach(() => http.verify());
+  afterEach(() => {
+    http.verify();
+    localStorage.clear();
+  });
+
+  const signInAs = async (role: UserRole) => {
+    const user: User = {
+      id: 3,
+      email: 'paula@example.com',
+      first_name: 'Paula',
+      last_name: 'Ng',
+      role,
+      created_at: '2026-11-01T00:00:00Z',
+    };
+    TestBed.inject(AuthService)
+      .login({ email: user.email, password: 'Password123' })
+      .subscribe();
+    http.expectOne(`${API}/auth/login`).flush({ token: TOKEN, user });
+    await settle();
+  };
+  const valueOf = (id: string): string =>
+    fixture.debugElement.query(By.css(`#${id}`)).nativeElement.value;
+
+  it('fills in the name and email of a signed-in applicant', async () => {
+    await signInAs(UserRole.APPLICANT);
+    expect(valueOf('full_name')).toBe('Paula Ng');
+    expect(valueOf('email')).toBe('paula@example.com');
+  });
+
+  it('keeps what the applicant already typed', async () => {
+    type('full_name', 'Paula Mitchel Ng');
+    await signInAs(UserRole.APPLICANT);
+    expect(valueOf('full_name')).toBe('Paula Mitchel Ng');
+    expect(valueOf('email')).toBe('paula@example.com');
+  });
+
+  it('does not fill in the form for staff', async () => {
+    await signInAs(UserRole.RECRUITER);
+    expect(valueOf('full_name')).toBe('');
+  });
 
   it('shows the role being applied for', () => {
     expect(text()).toContain('Apply for Software Developer');

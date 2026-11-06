@@ -73,7 +73,23 @@ describe('ApplicantRegister page', () => {
     http.expectNone(REGISTER_URL);
     expect(page.submitting()).toBe(false);
   });
+  it('does not accept names made of only spaces', () => {
+    page.form.setValue({ ...VALID, first_name: '   ', last_name: ' ' });
+    page.submit();
+    fixture.detectChanges();
 
+    http.expectNone(REGISTER_URL);
+    expect(page.showError('first_name')).toBe(true);
+    expect(page.showError('last_name')).toBe(true);
+  });
+
+  it('sends the names without extra spaces', () => {
+    page.form.setValue({ ...VALID, first_name: ' Ana ', last_name: 'Cruz  ' });
+    page.submit();
+
+    const request = http.expectOne(REGISTER_URL);
+    expect(request.request.body).toEqual(VALID);
+  });
   it('registers, signs in, and disables the button while busy', async () => {
     page.form.setValue(VALID);
     page.submit();
