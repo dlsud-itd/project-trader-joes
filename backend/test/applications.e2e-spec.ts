@@ -305,4 +305,68 @@ describe('Applications (e2e)', () => {
     await api().get('/api/ai-screenings/1').set(asApplicant).expect(403);
     await api().get('/api/applications').expect(401);
   });
+
+  describe('PATCH /api/applications/:id/stage', () => {
+    const moveTo = (id: number | string, kanban_stage: unknown) =>
+      api().patch(`/api/applications/${id}/stage`).send({ kanban_stage });
+
+    it('moves an application to another stage', async () => {
+      const id = await addApplication('e2e.stage.move@example.com');
+      const { body } = await moveTo(id, 'Interview').set(manager).expect(200);
+
+      expect(body.message).toBe('Application stage updated successfully.');
+      expect(body.application).toMatchObject({
+        id,
+        kanban_stage: 'Interview',
+      });
+      expect(body.application.updated_at).toEqual(expect.any(String));
+
+      const { body: saved } = await api()
+        .get(`/api/applications/${id}`)
+        .set(manager)
+        .expect(200);
+      expect(saved.kanban_stage).toBe('Interview');
+    });
+
+    it('can move an application back to an earlier stage', async () => {
+      const id = await addApplication('e2e.stage.back@example.com');
+      await moveTo(id, 'Offer').set(manager).expect(200);
+      const { body } = await moveTo(id, 'Screening').set(manager).expect(200);
+      expect(body.application.kanban_stage).toBe('Screening');
+    });
+
+    it('rejects a stage that does not exist (400)', async () => {
+      const id = await addApplication('e2e.stage.bad@example.com');
+      const { body } = await moveTo(id, 'Hired').set(manager).expect(400);
+      expect(body.error).toBe('Some fields are invalid.');
+      expect(body.details).toEqual([
+        'Choose a stage: Applied, Screening, Interview, Offer, Rejected.',
+      ]);
+      await moveTo(id, undefined).set(manager).expect(400);
+    });
+
+    it('returns 404 for an unknown or non-numeric application id', async () => {
+      const { body } = await moveTo(999_999_999, 'Offer')
+        .set(manager)
+        .expect(404);
+      expect(body.error).toBe('Application not found.');
+      await moveTo('abc', 'Offer').set(manager).expect(404);
+    });
+
+    it('lets only managers move applicants (recruiters 403)', async () => {
+      const id = await addApplication('e2e.stage.recruiter@example.com');
+      const recruiter = await signIn(
+        'recruiter@talentflow.dev',
+        'Recruiter123!',
+      );
+      await moveTo(id, 'Offer').set(recruiter).expect(403);
+      await moveTo(id, 'Offer').expect(401);
+
+      const { body } = await api()
+        .get(`/api/applications/${id}`)
+        .set(manager)
+        .expect(200);
+      expect(body.kanban_stage).toBe('Applied');
+    });
+  });
 });

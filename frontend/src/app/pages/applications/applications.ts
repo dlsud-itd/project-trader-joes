@@ -1,4 +1,4 @@
-import { DatePipe } from '@angular/common';
+import { DatePipe, NgTemplateOutlet } from '@angular/common';
 import {
   Component,
   computed,
@@ -9,8 +9,9 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { finalize } from 'rxjs';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, ParamMap, Router } from '@angular/router';
+import { finalize, map } from 'rxjs';
 import {
   AiScreening,
   AiScreeningsService,
@@ -20,14 +21,28 @@ import {
   ScreeningStatus,
 } from '../../core/ai-screenings';
 import { apiErrorMessage } from '../../core/api/api-error';
-import { ApplicationRow, ApplicationsService } from '../../core/applications';
+import {
+  ApplicationRow,
+  ApplicationsService,
+  KanbanStage,
+  StageUpdate,
+} from '../../core/applications';
+import { UserRole } from '../../core/auth/auth.models';
+import { AuthService } from '../../core/auth/auth.service';
 import { FitScoreBadge } from '../../shared/fit-score-badge';
 import { ApplicantDetail } from './applicant-detail';
+import { ApplicationsBoard, StageMove } from './applications-board';
+import { ApplicationsView, VIEW_PARAM } from './applications-view';
 import { initials } from './initials';
+import { ViewToggle } from './view-toggle';
 
 /** Quick filters: every applicant, a fit tier, or not scored yet. */
 export type FitFilter = 'all' | FitTier | 'unscored';
 export type SortOrder = 'fit' | 'newest';
+
+/** Shown when a stage change could not be saved; the card moves back. */
+export const moveFailedMessage = ({ row, stage }: StageMove): string =>
+  `Could not move ${row.full_name} to ${stage}. Try again.`;
 
 /** Which quick filter an application falls under. */
 export function fitGroup(row: ApplicationRow): Exclude<FitFilter, 'all'> {
@@ -44,19 +59,50 @@ export const NO_RESUME_MESSAGE =
 
 /**
  * Applications across all postings, with their AI fit scores
- * (WBS 4.3.3.2, 4.4). Pick one to see the score breakdown and explanation.
+ * (WBS 4.3.3.2, 4.4). The List view shows the score breakdown for the picked
+ * applicant; the Board view groups applicants by pipeline stage, where
+ * managers drag them between stages (WBS 4.4.2, 4.4.3). Both views share
+ * the search, posting filter, sort, and quick filters.
  */
 @Component({
   selector: 'app-applications',
-  imports: [DatePipe, FitScoreBadge, ApplicantDetail],
+  imports: [
+    DatePipe,
+    NgTemplateOutlet,
+    FitScoreBadge,
+    ApplicantDetail,
+    ApplicationsBoard,
+    ViewToggle,
+  ],
   templateUrl: './applications.html',
   styleUrl: './applications.scss',
 })
 export class Applications implements OnInit {
   private readonly applicationsApi = inject(ApplicationsService);
   private readonly screeningsApi = inject(AiScreeningsService);
+  private readonly auth = inject(AuthService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   private readonly detail = viewChild<ElementRef<HTMLElement>>('detail');
+
+  protected readonly ApplicationsView = ApplicationsView;
+  protected readonly view = toSignal(
+    this.route.queryParamMap.pipe(
+      map((params: ParamMap) =>
+        params.get(VIEW_PARAM) === ApplicationsView.BOARD
+          ? ApplicationsView.BOARD
+          : ApplicationsView.LIST,
+      ),
+    ),
+    { initialValue: ApplicationsView.LIST },
+  );
+  /** Only managers move applicants; recruiters see the board read-only. */
+  protected readonly canMove = computed(() =>
+    this.auth.hasRole(UserRole.MANAGER),
+  );
+  /** Applications with a stage change still saving. */
+  protected readonly moving = signal<ReadonlySet<number>>(new Set());
 
   protected readonly rows = signal<ApplicationRow[]>([]);
   protected readonly isLoading = signal(true);
@@ -199,12 +245,70 @@ export class Applications implements OnInit {
       });
   }
 
-  private setScoring(id: number, isBusy: boolean): void {
-    this.scoring.update((ids: ReadonlySet<number>) => {
-      const next = new Set(ids);
-      if (isBusy) next.add(id);
-      else next.delete(id);
-      return next;
+  protected setView(view: ApplicationsView): void {
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: {
+        [VIEW_PARAM]: view === ApplicationsView.BOARD ? view : null,
+      },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
     });
   }
+
+  /**
+   * Moves the card straight away, then saves the new stage. If saving
+   * fails, the card goes back to where it was and the error is shown.
+   */
+  protected moveStage(move: StageMove): void {
+    const { row, stage } = move;
+    if (this.moving().has(row.id)) return;
+    this.actionError.set(null);
+    const previous = row.kanban_stage;
+    this.setStage(row.id, stage);
+    this.moving.update((ids: ReadonlySet<number>) => toggle(ids, row.id, true));
+
+    this.applicationsApi
+      .updateStage(row.id, stage)
+      .pipe(
+        finalize(() =>
+          this.moving.update((ids: ReadonlySet<number>) =>
+            toggle(ids, row.id, false),
+          ),
+        ),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (saved: StageUpdate) =>
+          this.setStage(saved.id, saved.kanban_stage),
+        error: (err: unknown) => {
+          this.setStage(row.id, previous);
+          this.actionError.set(apiErrorMessage(err, moveFailedMessage(move)));
+        },
+      });
+  }
+
+  private setStage(id: number, stage: KanbanStage): void {
+    this.rows.update((rows: ApplicationRow[]) =>
+      rows.map((r: ApplicationRow) =>
+        r.id === id ? { ...r, kanban_stage: stage } : r,
+      ),
+    );
+  }
+
+  private setScoring(id: number, isBusy: boolean): void {
+    this.scoring.update((ids: ReadonlySet<number>) => toggle(ids, id, isBusy));
+  }
+}
+
+/** A copy of `ids` with `id` added (on) or removed (off). */
+function toggle(
+  ids: ReadonlySet<number>,
+  id: number,
+  isOn: boolean,
+): ReadonlySet<number> {
+  const next = new Set(ids);
+  if (isOn) next.add(id);
+  else next.delete(id);
+  return next;
 }

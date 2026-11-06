@@ -1,7 +1,16 @@
 <header class="head">
   <div>
     <h1>Applications</h1>
-    <p>Applicants across your postings, ranked by AI fit score.</p>
+    @if (view() === ApplicationsView.BOARD) {
+      <p>
+        Applicants by pipeline stage.
+        @if (canMove()) {
+          Drag a card to another column to move it.
+        }
+      </p>
+    } @else {
+      <p>Applicants across your postings, ranked by AI fit score.</p>
+    }
   </div>
 </header>
 
@@ -69,6 +78,8 @@
       <option value="newest">Newest first</option>
     </select>
   </label>
+
+  <app-view-toggle [view]="view()" (viewChange)="setView($event)" />
 </div>
 
 <div class="chips" role="group" aria-label="Filter by fit">
@@ -86,76 +97,96 @@
   }
 </div>
 
-<div class="layout">
-  <section class="list" aria-label="Applicants">
-    <div class="list__head" aria-hidden="true">
-      <span>Applicant</span>
-      <span>AI fit</span>
-      <span>Stage</span>
-      <span>Applied</span>
-    </div>
-
-    @for (row of visible(); track row.id) {
-      <div class="row" [class.is-selected]="row.id === selectedId()">
-        <span class="who">
-          <span class="avatar" aria-hidden="true">{{
-            initials(row.full_name)
-          }}</span>
-          <span class="who__text">
-            <!-- Covers the whole row, so clicking anywhere selects it -->
-            <button
-              type="button"
-              class="who__name"
-              [attr.aria-current]="row.id === selectedId() ? 'true' : null"
-              (click)="select(row)"
-            >
-              {{ row.full_name }}
-            </button>
-            <span class="who__sub">{{ row.posting_title }}</span>
-          </span>
-        </span>
-        <span class="row__fit">
-          <app-fit-score-badge
-            [score]="row.screening?.fit_score"
-            [status]="row.screening?.status"
-            [busy]="isScoring(row.id)"
-            (retry)="score(row)"
-          />
-        </span>
-        <span class="row__stage">
-          <span class="tf-stage" [class]="'tf-stage--' + row.kanban_stage">{{
-            row.kanban_stage
-          }}</span>
-        </span>
-        <span class="row__date">{{ row.submitted_at | date: 'MMM d' }}</span>
+@if (view() === ApplicationsView.BOARD) {
+  @if (visible().length) {
+    <app-applications-board
+      [rows]="visible()"
+      [canMove]="canMove()"
+      [moving]="moving()"
+      (move)="moveStage($event)"
+    />
+  } @else {
+    <section class="list" aria-label="Applicants">
+      <ng-container [ngTemplateOutlet]="empty" />
+    </section>
+  }
+} @else {
+  <div class="layout">
+    <section class="list" aria-label="Applicants">
+      <div class="list__head" aria-hidden="true">
+        <span>Applicant</span>
+        <span>AI fit</span>
+        <span>Stage</span>
+        <span>Applied</span>
       </div>
-    } @empty {
-      @if (isLoading()) {
-        <div class="empty" role="status">Loading applicants…</div>
-      } @else if (!rows().length && !loadError()) {
-        <div class="empty">No one has applied yet.</div>
-      } @else if (rows().length) {
-        <div class="empty">
-          <span>No applicants match these filters.</span>
-          <button
-            class="tf-btn tf-btn--ghost tf-btn--sm"
-            type="button"
-            (click)="query.set(''); posting.set('all'); filter.set('all')"
-          >
-            Clear filters
-          </button>
-        </div>
-      }
-    }
-  </section>
 
-  <aside class="detail" #detail aria-label="Selected applicant">
-    @if (selected(); as a) {
-      <app-applicant-detail
-        [application]="a"
-        [busy]="isScoring(a.id)"
-        (score)="score(a)"
-      />
-    }
-  </aside>
-</div>
+      @for (row of visible(); track row.id) {
+        <div class="row" [class.is-selected]="row.id === selectedId()">
+          <span class="who">
+            <span class="avatar" aria-hidden="true">{{
+              initials(row.full_name)
+            }}</span>
+            <span class="who__text">
+              <!-- Covers the whole row, so clicking anywhere selects it -->
+              <button
+                type="button"
+                class="who__name"
+                [attr.aria-current]="row.id === selectedId() ? 'true' : null"
+                (click)="select(row)"
+              >
+                {{ row.full_name }}
+              </button>
+              <span class="who__sub">{{ row.posting_title }}</span>
+            </span>
+          </span>
+          <span class="row__fit">
+            <app-fit-score-badge
+              [score]="row.screening?.fit_score"
+              [status]="row.screening?.status"
+              [busy]="isScoring(row.id)"
+              (retry)="score(row)"
+            />
+          </span>
+          <span class="row__stage">
+            <span class="tf-stage" [class]="'tf-stage--' + row.kanban_stage">{{
+              row.kanban_stage
+            }}</span>
+          </span>
+          <span class="row__date">{{ row.submitted_at | date: 'MMM d' }}</span>
+        </div>
+      } @empty {
+        <ng-container [ngTemplateOutlet]="empty" />
+      }
+    </section>
+
+    <aside class="detail" #detail aria-label="Selected applicant">
+      @if (selected(); as a) {
+        <app-applicant-detail
+          [application]="a"
+          [busy]="isScoring(a.id)"
+          (score)="score(a)"
+        />
+      }
+    </aside>
+  </div>
+}
+
+<!-- Shared by both views: loading, nobody applied, or nothing matches -->
+<ng-template #empty>
+  @if (isLoading()) {
+    <div class="empty" role="status">Loading applicants…</div>
+  } @else if (!rows().length && !loadError()) {
+    <div class="empty">No one has applied yet.</div>
+  } @else if (rows().length) {
+    <div class="empty">
+      <span>No applicants match these filters.</span>
+      <button
+        class="tf-btn tf-btn--ghost tf-btn--sm"
+        type="button"
+        (click)="query.set(''); posting.set('all'); filter.set('all')"
+      >
+        Clear filters
+      </button>
+    </div>
+  }
+</ng-template>

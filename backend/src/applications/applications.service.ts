@@ -105,6 +105,21 @@ export class ApplicationsService {
     return item;
   }
 
+  /** Moves an application to another pipeline stage (API spec IV.B). */
+  async updateStage(id: number, kanban_stage: KanbanStage) {
+    const [updated] = await this.db
+      .update(applications)
+      .set({ kanban_stage })
+      .where(eq(applications.id, id))
+      .returning({
+        id: applications.id,
+        kanban_stage: applications.kanban_stage,
+        updated_at: applications.updated_at,
+      });
+    if (!updated) throw new NotFoundException('Application not found.');
+    return updated;
+  }
+
   /**
    * Saves the application and the candidate's profile together, so there is
    * never an application without contact details.

@@ -1,0 +1,176 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+/* Five columns side by side; scrolls sideways when the screen is narrow */
+.board {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(220px, 1fr));
+  gap: 14px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+}
+
+/* ------------------------------------------------------------ column */
+
+.column {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border: 1px solid var(--tf-line);
+  border-radius: var(--tf-radius);
+  background: var(--tf-bg);
+
+  &__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+  }
+
+  &__count {
+    padding: 0 8px;
+    border-radius: 999px;
+    background: var(--tf-surface);
+    color: var(--tf-muted);
+    font-size: 12px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__cards {
+    display: grid;
+    align-content: start;
+    gap: 10px;
+    flex: 1;
+    min-height: 120px;
+    padding: 0 10px 12px;
+    border-radius: 0 0 var(--tf-radius) var(--tf-radius);
+    transition: background-color 150ms ease;
+
+    /* Highlights the column a card can be dropped into */
+    &.cdk-drop-list-receiving {
+      background: var(--tf-accent-soft);
+    }
+  }
+
+  &__empty {
+    margin: 0;
+    padding: 18px 8px;
+    border: 1px dashed var(--tf-line);
+    border-radius: var(--tf-radius-sm);
+    color: var(--tf-muted);
+    font-size: 13px;
+    text-align: center;
+  }
+}
+
+/* ------------------------------------------------------------ card */
+
+.card {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--tf-line);
+  border-radius: var(--tf-radius-sm);
+  background: var(--tf-surface);
+  box-shadow: var(--tf-shadow);
+
+  &.cdk-drag {
+    cursor: grab;
+  }
+
+  &.cdk-drag-disabled {
+    cursor: default;
+  }
+
+  &.is-moving {
+    opacity: 0.6;
+  }
+
+  &__who {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  &__text {
+    display: grid;
+    min-width: 0;
+  }
+
+  &__name {
+    overflow: hidden;
+    color: var(--tf-ink);
+    font-weight: 600;
+    text-decoration: none;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    &:hover {
+      color: var(--tf-accent);
+    }
+  }
+
+  &__sub {
+    overflow: hidden;
+    color: var(--tf-muted);
+    font-size: 12.5px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  &__date {
+    color: var(--tf-muted);
+    font-size: 12.5px;
+    white-space: nowrap;
+  }
+
+  &__move {
+    height: 30px;
+    padding: 0 8px;
+    border: 1px solid var(--tf-line);
+    border-radius: var(--tf-radius-sm);
+    background: var(--tf-surface);
+    font-size: 12.5px;
+    cursor: pointer;
+
+    &:focus {
+      box-shadow: var(--tf-focus);
+      outline: none;
+    }
+  }
+}
+
+/* The copy that follows the pointer while dragging */
+.card.cdk-drag-preview {
+  box-shadow: 0 12px 32px rgb(26 21 48 / 18%);
+  cursor: grabbing;
+}
+
+/* The gap left behind in the original column */
+.card.cdk-drag-placeholder {
+  opacity: 0.35;
+}
+
+.avatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--tf-accent-soft);
+  color: var(--tf-accent-strong);
+  font-size: 12px;
+  font-weight: 700;
+}

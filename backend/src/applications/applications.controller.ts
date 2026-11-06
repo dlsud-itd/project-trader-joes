@@ -5,6 +5,7 @@ import {
   NotFoundException,
   Param,
   ParseIntPipe,
+  Patch,
   Post,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
@@ -12,6 +13,7 @@ import { Public } from '../common/decorators/public.decorator.js';
 import { Roles } from '../common/decorators/roles.decorator.js';
 import { ApplicationsService } from './applications.service.js';
 import { CreateApplicationDto } from './dto/create-application.dto.js';
+import { UpdateStageDto } from './dto/update-stage.dto.js';
 
 /** A non-numeric id can't match an application, so treat it as not found. */
 const applicationId = () =>
@@ -46,6 +48,21 @@ export class ApplicationsController {
   @Get(':id')
   findOne(@Param('id', applicationId()) id: number) {
     return this.applications.findOne(id);
+  }
+
+  /**
+   * PATCH /api/applications/:id/stage — API spec IV.B
+   * Managers move applicants through the pipeline; recruiters can only view.
+   */
+  @ApiBearerAuth()
+  @Roles('manager')
+  @Patch(':id/stage')
+  async updateStage(
+    @Param('id', applicationId()) id: number,
+    @Body() { kanban_stage }: UpdateStageDto,
+  ) {
+    const application = await this.applications.updateStage(id, kanban_stage);
+    return { message: 'Application stage updated successfully.', application };
   }
 
   /**
