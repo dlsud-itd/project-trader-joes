@@ -106,6 +106,14 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'applications/:id',
+        title: 'Applicant · TalentFlow',
+        loadComponent: () =>
+          import('./pages/applicant-profile/applicant-profile').then(
+            (m) => m.ApplicantProfile,
+          ),
+      },
+      {
         path: 'team',
         title: 'Team accounts · TalentFlow',
         canActivate: [roleGuard(UserRole.MANAGER)],

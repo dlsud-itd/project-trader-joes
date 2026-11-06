@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { FitTier } from '../../core/ai-screenings';
 import { Applications, fitGroup } from './applications';
 import { ApplicationRow, SAMPLE_APPLICATIONS } from './sample-applications';
@@ -32,6 +33,8 @@ describe('Applications', () => {
 
   beforeEach(() => {
     vi.useFakeTimers();
+    // The detail panel links to the applicant's profile page.
+    TestBed.configureTestingModule({ providers: [provideRouter([])] });
     fixture = TestBed.createComponent(Applications);
     fixture.detectChanges();
   });
