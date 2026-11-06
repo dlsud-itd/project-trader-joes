@@ -106,7 +106,8 @@ export const SAMPLE_APPLICATIONS: ApplicationRow[] = [
     phone: '+63 917 555 0101',
     portfolio_url: 'https://meilin.dev',
     cover_note:
-      'I have shipped Angular features at two internships and would love to keep building tools that recruiters use every day.',
+      'I have shipped Angular features at two internships and would love ' +
+      'to keep building tools that recruiters use every day.',
     resume: sampleResume(
       101,
       'Mei-Lin-Chen-Resume.pdf',
