@@ -10,7 +10,9 @@ stage transitions (4.4.3).
 Sections 1 and 2 below). **4.4.2 and 4.4.3 are still not built**: `applications.html` renders a
 flat, sortable/filterable list with a read-only `kanban_stage` badge, not a Kanban board with
 columns, and there is no `PATCH /api/applications/:id/stage` endpoint anywhere in
-`backend/src/applications`. Sections 3-5 are still a forward-looking plan, not a report.
+`backend/src/applications`. Sections 3-5 are still a forward-looking plan, not a report — though
+the code for them already exists, finished with its own tests, on the unmerged
+`feat/applicants-board-pipeline` branch, with no PR open yet as of this writing.
 
 `TC-STG` cases are written directly against `trader_joes_API_Specification.pdf` section IV.B
 (`PATCH /api/applications/{applicationId}/stage`), which is already documented.
