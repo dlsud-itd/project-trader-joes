@@ -21,7 +21,7 @@ actual browser pass; see the Notes below.
 | TC-CAR-06 | Signed-in staff on careers page | 1. Sign in as manager<br>2. Open `/careers` | Closed postings still don't show | Every careers-page request asks for `status=open` regardless of sign-in state (asserted in `careers.spec.ts`), so a signed-in staff member sees the same open-only list | **Pass** |
 | TC-APP-01 | Required fields | 1. Open Apply now<br>2. Click Submit application with an empty form | Errors for name, email, and resume; nothing is sent | Submitting empty shows "Enter your full name.", "Enter a valid email address.", "Attach your resume."; no request sent | **Pass** |
 | TC-APP-02 | Optional field checks | 1. Type "call me" as phone and "github.com/me" as link<br>2. Submit | Phone and link errors | "call me" and "github.com/juan" (no `https://`) each show their validation message; no request sent | **Pass** |
-| TC-APP-03 | Wrong resume type | 1. Choose a .png or .doc file | "Choose a PDF or Word (.docx) file." and the file is not kept | `.png` and `.docx` are both rejected, but the message is "Choose a PDF file." — the app now only accepts PDF; Word (.docx) is no longer accepted at all | **Fail** — Expected Result is stale, see Notes |
+| TC-APP-03 | Wrong resume type | 1. Choose a .png or .docx file | "Choose a PDF file." and the file is not kept (PDF only) | `.png` and `.docx` are both rejected with "Choose a PDF file." | **Pass** |
 | TC-APP-04 | Resume over 5 MB | 1. Choose a PDF over 5 MB | "The resume must be 5 MB or smaller." | A PDF one byte over the 5 MB limit is rejected with exactly "The resume must be 5 MB or smaller." | **Pass** |
 | TC-APP-05 | Drag and drop | 1. Drag a PDF onto the resume box | File name and size are shown, with Remove | Dropping a PDF on the drop zone sets it as the chosen file, same as picking it; name/size shown with a Remove button | **Pass** |
 | TC-APP-06 | Successful application | 1. Fill in name, email, resume<br>2. Submit | "Application sent" with the email shown | `POST /api/applications` then `POST /api/resumes` fire in sequence; "Application sent" is shown with the submitted email | **Pass** |
@@ -34,12 +34,10 @@ actual browser pass; see the Notes below.
 - Results above came from `npm test` in `frontend/` on 2026-11-06 (Angular component tests via
   Karma/Vitest), not from manually clicking through `http://localhost:4200` as this matrix's
   header originally asked. Each "Pass" cites the spec file and behavior it came from.
-- **TC-APP-03 is a real discrepancy, not just an unrun case.** The Expected Result column says
-  Word (`.docx`) files should be accepted with message "Choose a PDF or Word (.docx) file.", but
-  `resume-input.ts` (`RESUME_ACCEPT = '.pdf,application/pdf'`) only accepts PDF, and rejects
-  `.docx` with "Choose a PDF file." Either this row's Expected Result needs updating to match an
-  intentional PDF-only decision, or PDF-only was an unintentional regression — worth confirming
-  with whoever owns resume upload before resolving this row.
+- TC-APP-03's Expected Result was corrected on 2026-11-06: resumes are PDF-only by design
+  (`resume-input.ts`: `RESUME_ACCEPT = '.pdf,application/pdf'`, comment "Resumes are PDF only.").
+  The row originally said Word (`.docx`) should also be accepted — that was just an outdated line
+  in the original doc, not a bug in the app; confirmed intentional, so no team decision needed.
 - TC-APP-09 confirmed live on 2026-11-06 — no longer blocked.
 - Two cases are still open, and both are blocked on the same thing: **the local dev database has
   no job postings in it** (`/postings` showed "No job postings yet" as of 2026-11-06). Create at
