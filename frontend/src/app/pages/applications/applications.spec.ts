@@ -197,6 +197,20 @@ describe('Applications', () => {
     expect(names()).toEqual(['Sofia Alvarez']);
   });
 
+  it('shows each applicant’s team rating and sorts by it', async () => {
+    await render();
+    // Shown next to the posting; unrated applicants show nothing.
+    const ratings = Array.from(
+      el().querySelectorAll('.who__sub app-rating-average'),
+    ).map((r) => r.textContent?.replace(/\s+/g, ' ').trim());
+    const rated = TEST_APPLICATIONS.filter((r) => r.rating.average !== null);
+    expect(ratings).toHaveLength(rated.length);
+    expect(ratings).toContain('★ 4.5 (2)');
+
+    pick('sort', 'Rating: high to low');
+    expect(names().slice(0, 2)).toEqual(['Mei-Lin Chen', 'Aisha Rahman']);
+  });
+
   it('filters by stage and sorts by two fields', async () => {
     await render();
     pick('stage', 'Applied');

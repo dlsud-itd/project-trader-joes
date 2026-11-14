@@ -19,6 +19,8 @@ import {
 export enum SortOption {
   FIT_HIGH = 'fit-desc',
   FIT_LOW = 'fit-asc',
+  RATING_HIGH = 'rating-desc',
+  RATING_LOW = 'rating-asc',
   NEWEST = 'newest',
   OLDEST = 'oldest',
   NAME_AZ = 'name-asc',
@@ -29,6 +31,8 @@ export enum SortOption {
 export const SORT_LABEL: Record<SortOption, string> = {
   [SortOption.FIT_HIGH]: 'Fit score: high to low',
   [SortOption.FIT_LOW]: 'Fit score: low to high',
+  [SortOption.RATING_HIGH]: 'Rating: high to low',
+  [SortOption.RATING_LOW]: 'Rating: low to high',
   [SortOption.NEWEST]: 'Newest first',
   [SortOption.OLDEST]: 'Oldest first',
   [SortOption.NAME_AZ]: 'Name: A to Z',
@@ -197,16 +201,26 @@ function fitScore(row: ApplicationRow): number | null {
   return s?.status === ScreeningStatus.COMPLETED ? s.fit_score : null;
 }
 
-/** Compares scores either way, always keeping unscored applicants last. */
-function byFit(direction: 1 | -1): Compare {
+/** Compares values either way, always keeping missing ones last. */
+function nullsLast(
+  value: (row: ApplicationRow) => number | null,
+  direction: 1 | -1,
+): Compare {
   return (a: ApplicationRow, b: ApplicationRow) => {
-    const x = fitScore(a);
-    const y = fitScore(b);
+    const x = value(a);
+    const y = value(b);
     if (x === null || y === null)
       return Number(x === null) - Number(y === null);
     return (x - y) * direction;
   };
 }
+
+/** Unscored applicants always go last. */
+const byFit = (direction: 1 | -1): Compare => nullsLast(fitScore, direction);
+
+/** Unrated applicants always go last. */
+const byRating = (direction: 1 | -1): Compare =>
+  nullsLast((row: ApplicationRow) => row.rating.average, direction);
 
 const byDate: Compare = (a: ApplicationRow, b: ApplicationRow) =>
   a.submitted_at.localeCompare(b.submitted_at);
@@ -220,6 +234,8 @@ const byStage: Compare = (a: ApplicationRow, b: ApplicationRow) =>
 const COMPARE: Record<SortOption, Compare> = {
   [SortOption.FIT_HIGH]: byFit(-1),
   [SortOption.FIT_LOW]: byFit(1),
+  [SortOption.RATING_HIGH]: byRating(-1),
+  [SortOption.RATING_LOW]: byRating(1),
   [SortOption.NEWEST]: (a: ApplicationRow, b: ApplicationRow) => byDate(b, a),
   [SortOption.OLDEST]: byDate,
   [SortOption.NAME_AZ]: byName,

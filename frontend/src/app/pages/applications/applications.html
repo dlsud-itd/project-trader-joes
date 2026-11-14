@@ -93,7 +93,12 @@
               >
                 {{ row.full_name }}
               </button>
-              <span class="who__sub">{{ row.posting_title }}</span>
+              <span class="who__sub">
+                @if (row.rating.average !== null) {
+                  <app-rating-average [rating]="row.rating" /> ·
+                }
+                {{ row.posting_title }}
+              </span>
             </span>
           </span>
           <span class="row__fit">

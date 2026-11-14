@@ -17,6 +17,11 @@ import {
 } from '../database/schema.js';
 import type { CreateApplicationDto } from './dto/create-application.dto.js';
 import { signUploadToken } from '../common/upload-token/upload-token.js';
+import {
+  NO_RATINGS,
+  type RatingAverage,
+  ratingAverages,
+} from '../reviews/rating-averages.js';
 
 /** One application in GET /api/applications and /api/applications/:id. */
 export type ApplicationListItem = {
@@ -42,6 +47,8 @@ export type ApplicationListItem = {
   } | null;
   /** Null until the resume has been screened. */
   screening: AiScreening | null;
+  /** The team's average star rating; `average` is null until someone rates. */
+  rating: RatingAverage;
 };
 
 /** What to read for each application, shared by the list and one-item views. */
@@ -84,23 +91,29 @@ export class ApplicationsService {
 
   /** Every application, newest first, for the staff Applications page. */
   async list(): Promise<ApplicationListItem[]> {
-    const rows = await this.db.query.applications.findMany({
-      ...listQuery,
-      orderBy: [desc(applications.submitted_at), desc(applications.id)],
-    });
+    const [rows, averages] = await Promise.all([
+      this.db.query.applications.findMany({
+        ...listQuery,
+        orderBy: [desc(applications.submitted_at), desc(applications.id)],
+      }),
+      ratingAverages(this.db),
+    ]);
     return rows.flatMap((row) => {
-      const item = toListItem(row);
+      const item = toListItem(row, averages.get(row.id));
       return item ? [item] : [];
     });
   }
 
   /** One application, for the applicant profile page. */
   async findOne(id: number): Promise<ApplicationListItem> {
-    const row = await this.db.query.applications.findFirst({
-      ...listQuery,
-      where: eq(applications.id, id),
-    });
-    const item = row && toListItem(row);
+    const [row, averages] = await Promise.all([
+      this.db.query.applications.findFirst({
+        ...listQuery,
+        where: eq(applications.id, id),
+      }),
+      ratingAverages(this.db, [id]),
+    ]);
+    const item = row && toListItem(row, averages.get(id));
     if (!item) throw new NotFoundException('Application not found.');
     return item;
   }
@@ -193,6 +206,7 @@ type ListRow = Omit<
   | 'cover_note'
   | 'resume'
   | 'screening'
+  | 'rating'
 > & {
   posting: { title: string };
   profile: Pick<
@@ -203,13 +217,10 @@ type ListRow = Omit<
   screening: AiScreening | null | undefined;
 };
 
-function toListItem({
-  posting,
-  profile,
-  resume,
-  screening,
-  ...row
-}: ListRow): ApplicationListItem | null {
+function toListItem(
+  { posting, profile, resume, screening, ...row }: ListRow,
+  rating: RatingAverage = NO_RATINGS,
+): ApplicationListItem | null {
   // Applying saves the profile in the same transaction, so every row has one.
   if (!profile) return null;
   return {
@@ -218,5 +229,6 @@ function toListItem({
     ...profile,
     resume: resume ?? null,
     screening: screening ?? null,
+    rating,
   };
 }

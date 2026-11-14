@@ -16,13 +16,16 @@ import { finalize } from 'rxjs';
 import { AiScreening, AiScreeningsService } from '../../core/ai-screenings';
 import { apiErrorMessage } from '../../core/api/api-error';
 import { ApplicationRow, ApplicationsService } from '../../core/applications';
+import { RatingAverage } from '../../core/reviews';
 import { FitScoreCard } from '../../shared/fit-score-card';
+import { RatingAverageBadge } from '../../shared/rating-average';
 import { ResumeViewer } from '../../shared/resume-viewer';
 import {
   NO_RESUME_MESSAGE,
   SCORE_FAILED_MESSAGE,
 } from '../applications/applications';
 import { initials } from '../applications/initials';
+import { NotesAndRating } from './notes-and-rating';
 
 const LOAD_FAILED_MESSAGE = 'Could not load this applicant.';
 
@@ -37,7 +40,14 @@ export function displayUrl(url: string): string {
  */
 @Component({
   selector: 'app-applicant-profile',
-  imports: [DatePipe, RouterLink, FitScoreCard, ResumeViewer],
+  imports: [
+    DatePipe,
+    RouterLink,
+    FitScoreCard,
+    NotesAndRating,
+    RatingAverageBadge,
+    ResumeViewer,
+  ],
   templateUrl: './applicant-profile.html',
   styleUrl: './applicant-profile.scss',
 })
@@ -100,7 +110,11 @@ export class ApplicantProfile {
         },
       });
   }
-
+  /** Keeps the rating in the header in step with the Notes and rating card. */
+  protected updateRating(rating: RatingAverage): void {
+    const row = this.application();
+    if (row) this.application.set({ ...row, rating });
+  }
   /** Score resume / Re-score / Retry. Each call uses Gemini quota. */
   protected score(): void {
     const row = this.application();

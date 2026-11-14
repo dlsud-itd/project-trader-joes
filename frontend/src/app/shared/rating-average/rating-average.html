@@ -1,0 +1,15 @@
+<span
+  class="avg"
+  [class.is-empty]="rating().average === null"
+  [attr.title]="label()"
+  [attr.aria-label]="label()"
+  role="img"
+>
+  @if (rating().average; as average) {
+    <span class="avg__star" aria-hidden="true">★</span>
+    {{ average.toFixed(1) }}
+    <span class="avg__count">({{ rating().count }})</span>
+  } @else {
+    —
+  }
+</span>

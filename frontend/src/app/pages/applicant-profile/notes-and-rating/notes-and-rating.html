@@ -1,0 +1,108 @@
+<section class="card" aria-labelledby="reviews-title">
+  <h2 id="reviews-title">Notes and rating</h2>
+
+  @if (isLoading()) {
+    <p class="muted" role="status">Loading notes…</p>
+  } @else if (loadError(); as message) {
+    <div class="tf-alert tf-alert--error" role="alert">
+      <span>{{ message }}</span>
+      <button
+        class="tf-btn tf-btn--ghost tf-btn--sm"
+        type="button"
+        (click)="load()"
+      >
+        Try again
+      </button>
+    </div>
+  } @else if (summary(); as s) {
+    <div class="rating">
+      <div class="rating__team">
+        <span class="rating__label">Team rating</span>
+        <app-rating-average [rating]="s" />
+      </div>
+      @if (s.can_review) {
+        <div class="rating__mine">
+          <span class="rating__label">Your rating</span>
+          <app-star-rating [value]="s.my_rating" (rate)="rate($event)" />
+          @if (s.my_rating !== null) {
+            <button class="link" type="button" (click)="clearRating()">
+              Remove
+            </button>
+          }
+        </div>
+      }
+    </div>
+    @if (ratingError(); as message) {
+      <p class="tf-alert tf-alert--error" role="alert">{{ message }}</p>
+    }
+
+    @if (s.can_review) {
+      <form class="compose" [formGroup]="noteForm" (ngSubmit)="post()">
+        <label class="visually-hidden" for="note-draft">Add a note</label>
+        <textarea
+          id="note-draft"
+          rows="3"
+          placeholder="Add a note for the team…"
+          formControlName="body"
+          [attr.maxlength]="maxLength"
+          aria-describedby="note-hint"
+          (keydown)="onKeydown($event)"
+        ></textarea>
+        <div class="compose__foot">
+          <span id="note-hint" class="muted">
+            {{ draft.value.length | number }} / {{ maxLength | number }} ·
+            Ctrl+Enter to post
+          </span>
+          <button
+            class="tf-btn tf-btn--primary tf-btn--sm"
+            type="submit"
+            [disabled]="draft.invalid"
+          >
+            Post note
+          </button>
+        </div>
+      </form>
+    } @else {
+      <p class="readonly">
+        Only managers and recruiters assigned to this posting can add notes and
+        ratings.
+      </p>
+    }
+    @if (noteError(); as message) {
+      <p class="tf-alert tf-alert--error" role="alert">{{ message }}</p>
+    }
+
+    <ul class="notes" aria-label="Notes" aria-live="polite">
+      @for (note of notes(); track note.id) {
+        <li class="note" [class.is-pending]="isPending(note)">
+          <div class="note__head">
+            <span class="note__author">
+              {{ note.author.first_name }} {{ note.author.last_name }}
+              @if (isMine(note)) {
+                <span class="muted">(you)</span>
+              }
+            </span>
+            @if (isPending(note)) {
+              <span class="muted">Posting…</span>
+            } @else {
+              <time
+                class="muted"
+                [attr.datetime]="note.created_at"
+                [title]="note.created_at | date: 'MMM d, y, h:mm a'"
+                >{{ timeAgo(note) }}</time
+              >
+            }
+          </div>
+          <p class="note__body">{{ note.body }}</p>
+        </li>
+      } @empty {
+        <li class="empty muted">
+          No notes yet.
+          @if (s.can_review) {
+            Be the first to add one.
+          }
+        </li>
+      }
+    </ul>
+  }
+</section>

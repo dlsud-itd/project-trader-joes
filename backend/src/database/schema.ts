@@ -1,5 +1,6 @@
-import { relations } from 'drizzle-orm';
+import { relations, sql } from 'drizzle-orm';
 import {
+  check,
   customType,
   index,
   integer,
@@ -309,3 +310,73 @@ export const jobAssignmentsRelations = relations(jobAssignments, ({ one }) => ({
 }));
 
 export type JobAssignment = typeof jobAssignments.$inferSelect;
+
+/** Longest note staff can leave on an applicant, in characters. */
+export const NOTE_MAX_LENGTH = 2000;
+/** Star ratings go from 1 to 5. */
+export const RATING_MIN = 1;
+export const RATING_MAX = 5;
+
+/** The allowed ranges, written into the CHECK constraints below. */
+const NOTE_LENGTH_RANGE = sql.raw(`between 1 and ${NOTE_MAX_LENGTH}`);
+const RATING_RANGE = sql.raw(`between ${RATING_MIN} and ${RATING_MAX}`);
+
+/** A note a manager or assigned recruiter left on an application. */
+export const applicationNotes = pgTable(
+  'application_notes',
+  {
+    id: serial('id').primaryKey(),
+    application_id: integer('application_id')
+      .notNull()
+      .references(() => applications.id, { onDelete: 'cascade' }),
+    author_id: integer('author_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    body: text('body').notNull(),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index('application_notes_application_idx').on(t.application_id),
+    check(
+      'application_notes_body_length',
+      sql`char_length(${t.body}) ${NOTE_LENGTH_RANGE}`,
+    ),
+  ],
+);
+
+/**
+ * One 1–5 star rating per user per application. Rating again changes the
+ * same row.
+ */
+export const applicationRatings = pgTable(
+  'application_ratings',
+  {
+    id: serial('id').primaryKey(),
+    application_id: integer('application_id')
+      .notNull()
+      .references(() => applications.id, { onDelete: 'cascade' }),
+    user_id: integer('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    rating: integer('rating').notNull(),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updated_at: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    unique('application_ratings_application_user_unique').on(
+      t.application_id,
+      t.user_id,
+    ),
+    check('application_ratings_rating_range', sql`${t.rating} ${RATING_RANGE}`),
+  ],
+);
+
+export type ApplicationNote = typeof applicationNotes.$inferSelect;
+export type ApplicationRating = typeof applicationRatings.$inferSelect;

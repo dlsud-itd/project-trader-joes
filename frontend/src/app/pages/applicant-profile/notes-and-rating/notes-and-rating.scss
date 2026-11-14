@@ -1,0 +1,148 @@
+:host {
+  display: block;
+}
+
+.card {
+  display: grid;
+  gap: 16px;
+  padding: 20px 22px;
+  border: 1px solid var(--tf-line);
+  border-radius: var(--tf-radius);
+  background: var(--tf-surface);
+  box-shadow: var(--tf-shadow);
+
+  h2 {
+    font-size: 16px;
+  }
+}
+
+.muted {
+  color: var(--tf-muted);
+  font-size: 12.5px;
+}
+
+/* ------------------------------------------------------------ rating */
+
+.rating {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 28px;
+  align-items: center;
+
+  &__team,
+  &__mine {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
+  &__label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--tf-ink-soft);
+  }
+}
+
+.link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--tf-muted);
+  font-size: 12.5px;
+  text-decoration: underline;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--tf-danger);
+  }
+}
+
+/* ----------------------------------------------------------- compose */
+
+.compose {
+  display: grid;
+  gap: 8px;
+
+  textarea {
+    width: 100%;
+    min-height: 84px;
+    padding: 10px 12px;
+    border: 1px solid var(--tf-line);
+    border-radius: var(--tf-radius-sm);
+    background: var(--tf-surface);
+    line-height: 1.5;
+    resize: vertical;
+
+    &:focus {
+      border-color: var(--tf-accent);
+      box-shadow: var(--tf-focus);
+      outline: none;
+    }
+  }
+
+  &__foot {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+.readonly {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--tf-radius-sm);
+  background: var(--tf-bg);
+  color: var(--tf-muted);
+  font-size: 13px;
+}
+
+/* ------------------------------------------------------------- notes */
+
+.notes {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.note {
+  padding-top: 12px;
+  border-top: 1px solid var(--tf-line);
+
+  &.is-pending {
+    opacity: 0.6;
+  }
+
+  &__head {
+    display: flex;
+    gap: 8px;
+    align-items: baseline;
+    justify-content: space-between;
+  }
+
+  &__author {
+    font-size: 13.5px;
+    font-weight: 600;
+  }
+
+  &__body {
+    margin: 4px 0 0;
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+  }
+}
+
+.empty {
+  padding: 8px 0;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
