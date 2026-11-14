@@ -31,6 +31,15 @@ import { UserRole } from '../../core/auth/auth.models';
 import { AuthService } from '../../core/auth/auth.service';
 import { FitScoreBadge } from '../../shared/fit-score-badge';
 import { ApplicantDetail } from './applicant-detail';
+import {
+  ApplicantQuery,
+  clearFilters,
+  DEFAULT_QUERY,
+  matchesQuery,
+  postingOptions,
+  SearchToolbar,
+  sortApplications,
+} from './applicant-search';
 import { ApplicationsBoard, StageMove } from './applications-board';
 import { ApplicationsView, VIEW_PARAM } from './applications-view';
 import { initials } from './initials';
@@ -38,7 +47,6 @@ import { ViewToggle } from './view-toggle';
 
 /** Quick filters: every applicant, a fit tier, or not scored yet. */
 export type FitFilter = 'all' | FitTier | 'unscored';
-export type SortOrder = 'fit' | 'newest';
 
 /** Shown when a stage change could not be saved; the card moves back. */
 export const moveFailedMessage = ({ row, stage }: StageMove): string =>
@@ -62,7 +70,7 @@ export const NO_RESUME_MESSAGE =
  * (WBS 4.3.3.2, 4.4). The List view shows the score breakdown for the picked
  * applicant; the Board view groups applicants by pipeline stage, where
  * managers drag them between stages (WBS 4.4.2, 4.4.3). Both views share
- * the search, posting filter, sort, and quick filters.
+ * the search, filters, two-level sort, and quick filters (WBS 4.5.1.1).
  */
 @Component({
   selector: 'app-applications',
@@ -72,6 +80,7 @@ export const NO_RESUME_MESSAGE =
     FitScoreBadge,
     ApplicantDetail,
     ApplicationsBoard,
+    SearchToolbar,
     ViewToggle,
   ],
   templateUrl: './applications.html',
@@ -109,28 +118,21 @@ export class Applications implements OnInit {
   protected readonly loadError = signal<string | null>(null);
   /** Why the last Score / Re-score could not run (not a failed screening). */
   protected readonly actionError = signal<string | null>(null);
-  protected readonly query = signal('');
-  protected readonly posting = signal('all');
-  protected readonly sort = signal<SortOrder>('fit');
+  /** Search, filters, and sort from the toolbar. */
+  protected readonly search = signal<ApplicantQuery>(DEFAULT_QUERY);
   protected readonly filter = signal<FitFilter>('all');
   protected readonly selectedId = signal<number | null>(null);
   /** Applications with a screening in flight. */
   protected readonly scoring = signal<ReadonlySet<number>>(new Set());
 
-  protected readonly postings = computed(() =>
-    [...new Set(this.rows().map((r) => r.posting_title))].sort(),
-  );
+  protected readonly postings = computed(() => postingOptions(this.rows()));
 
-  /** Rows matching the search and posting, before the fit filter. */
+  /** Rows matching the search and filters, before the fit filter. */
   private readonly searched = computed(() => {
-    const q = this.query().trim().toLowerCase();
-    const posting = this.posting();
-    return this.rows().filter(
-      (r) =>
-        (posting === 'all' || r.posting_title === posting) &&
-        (!q ||
-          r.full_name.toLowerCase().includes(q) ||
-          r.email.toLowerCase().includes(q)),
+    const query = this.search();
+    const now = new Date();
+    return this.rows().filter((r: ApplicationRow) =>
+      matchesQuery(r, query, now),
     );
   });
 
@@ -162,12 +164,8 @@ export class Applications implements OnInit {
     const list = this.searched().filter(
       (r) => f === 'all' || fitGroup(r) === f,
     );
-    return this.sort() === 'fit'
-      ? list.sort(
-          (a, b) =>
-            (b.screening?.fit_score ?? -1) - (a.screening?.fit_score ?? -1),
-        )
-      : list.sort((a, b) => b.submitted_at.localeCompare(a.submitted_at));
+    const { sort, thenBy } = this.search();
+    return sortApplications(list, [sort, thenBy]);
   });
 
   protected readonly selected = computed(
@@ -211,6 +209,12 @@ export class Applications implements OnInit {
         panel.scrollIntoView({ behavior: 'smooth' });
       }
     });
+  }
+
+  /** "Clear filters" when nothing matches: the toolbar and the fit chips. */
+  protected clearAllFilters(): void {
+    this.search.update(clearFilters);
+    this.filter.set('all');
   }
 
   protected isScoring(id: number): boolean {
