@@ -61,6 +61,26 @@ describe('Applications', () => {
     );
   const detailName = () => el().querySelector('.profile h2')?.textContent;
 
+  /** Types into the toolbar's search box. */
+  const search = (text: string) => {
+    const input = el().querySelector<HTMLInputElement>('input[type=search]')!;
+    input.value = text;
+    input.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+  };
+
+  /** Picks an option by its label in one of the toolbar's dropdowns. */
+  const pick = (control: string, label: string) => {
+    const select = el().querySelector<HTMLSelectElement>(
+      `select[formControlName=${control}]`,
+    )!;
+    select.selectedIndex = Array.from(select.options).findIndex(
+      (o: HTMLOptionElement) => o.textContent?.trim() === label,
+    );
+    select.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+  };
+
   /** Picks an applicant by name, then clicks Score resume or Re-score. */
   const scoreFromCard = (name: string, button: string) => {
     Array.from(el().querySelectorAll<HTMLButtonElement>('.who__name'))
@@ -108,8 +128,10 @@ describe('Applications', () => {
   it('loads applicants from the API, highest fit score first', async () => {
     await render();
     expect(names().length).toBe(TEST_APPLICATIONS.length);
-    expect(names()[0]).toBe('Mei-Lin Chen');
-    expect(names().at(-1)).toBe('Hana Kim'); // unscored go last
+    // Mei-Lin and Jonah both score 90; Jonah applied later, so he leads.
+    expect(names().slice(0, 2)).toEqual(['Jonah Reyes', 'Mei-Lin Chen']);
+    // Unscored go last, newest first among them.
+    expect(names().slice(-2)).toEqual(['Hana Kim', 'Lucas Martin']);
     expect(el().textContent).not.toContain('sample');
   });
 
@@ -157,7 +179,7 @@ describe('Applications', () => {
     expect(chip('Strong fit')?.textContent).toContain('2');
     chip('Strong fit')?.click();
     fixture.detectChanges();
-    expect(names()).toEqual(['Mei-Lin Chen', 'Jonah Reyes']);
+    expect(names()).toEqual(['Jonah Reyes', 'Mei-Lin Chen']);
   });
 
   it('searches by name or email', async () => {
@@ -169,9 +191,39 @@ describe('Applications', () => {
     expect(names()).toEqual(['Daniel Okafor']);
   });
 
+  it('searches skills the AI found in the resume', async () => {
+    await render();
+    search('ci pipelines');
+    expect(names()).toEqual(['Sofia Alvarez']);
+  });
+
+  it('filters by stage and sorts by two fields', async () => {
+    await render();
+    pick('stage', 'Applied');
+    pick('sort', 'Name: Z to A');
+    expect(names()).toEqual(['Lucas Martin', 'Jonah Reyes', 'Hana Kim']);
+    expect(el().textContent).toContain('Clear filters (1)');
+  });
+
+  it('clears every filter when nothing matches', async () => {
+    await render();
+    search('nobody by this name');
+    pick('resume', 'Missing');
+    expect(el().textContent).toContain('No applicants match these filters.');
+
+    Array.from(el().querySelectorAll<HTMLButtonElement>('.empty button'))
+      .find((b: HTMLButtonElement) => b.textContent?.includes('Clear'))
+      ?.click();
+    fixture.detectChanges();
+    expect(names().length).toBe(TEST_APPLICATIONS.length);
+    expect(
+      el().querySelector<HTMLInputElement>('input[type=search]')?.value,
+    ).toBe('');
+  });
+
   it('opens the fit score card for the picked applicant', async () => {
     await render();
-    expect(detailName()).toBe('Mei-Lin Chen');
+    expect(detailName()).toBe('Jonah Reyes');
     expect(el().querySelector('.detail app-fit-score-card')).not.toBeNull();
 
     el().querySelectorAll<HTMLButtonElement>('.who__name')[2].click();
