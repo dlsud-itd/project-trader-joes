@@ -114,12 +114,14 @@ describe('Applications board view', () => {
     expect(router.url).toBe('/applications');
   });
 
-  it('applies the same posting filter and quick filters', async () => {
+  it('applies the same search filters as the list', async () => {
     await open('/applications?view=board');
     const posting = el().querySelector<HTMLSelectElement>(
-      '.select select',
+      'select[formControlName=postingId]',
     ) as HTMLSelectElement;
-    posting.value = 'QA Analyst';
+    posting.selectedIndex = Array.from(posting.options).findIndex(
+      (o: HTMLOptionElement) => o.textContent?.trim() === 'QA Analyst',
+    );
     posting.dispatchEvent(new Event('change'));
     harness.detectChanges();
 

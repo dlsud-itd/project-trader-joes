@@ -1,0 +1,99 @@
+<form class="toolbar" [formGroup]="form">
+  <div class="row">
+    <label class="search">
+      <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true">
+        <circle
+          cx="9"
+          cy="9"
+          r="5.5"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.6"
+        />
+        <path
+          d="M13 13l3.5 3.5"
+          stroke="currentColor"
+          stroke-width="1.6"
+          stroke-linecap="round"
+        />
+      </svg>
+      <input
+        type="search"
+        formControlName="text"
+        placeholder="Search name, email, phone, posting, or skills"
+        aria-label="Search applicants"
+      />
+    </label>
+
+    <label class="select">
+      <span>Posting</span>
+      <select formControlName="postingId">
+        <option [ngValue]="null">All postings</option>
+        @for (p of postings(); track p.id) {
+          <option [ngValue]="p.id">{{ p.title }}</option>
+        }
+      </select>
+    </label>
+
+    <ng-content />
+  </div>
+
+  <div class="row" role="group" aria-label="Filter and sort">
+    <label class="select">
+      <span>Stage</span>
+      <select formControlName="stage">
+        <option [ngValue]="null">All stages</option>
+        @for (stage of stages; track stage) {
+          <option [ngValue]="stage">{{ stage }}</option>
+        }
+      </select>
+    </label>
+
+    <label class="select">
+      <span>Applied</span>
+      <select formControlName="applied">
+        @for (option of appliedOptions; track option) {
+          <option [ngValue]="option">{{ appliedLabel[option] }}</option>
+        }
+      </select>
+    </label>
+
+    <label class="select">
+      <span>Resume</span>
+      <select formControlName="resume">
+        @for (option of resumeOptions; track option) {
+          <option [ngValue]="option">{{ resumeLabel[option] }}</option>
+        }
+      </select>
+    </label>
+
+    <label class="select">
+      <span>Sort by</span>
+      <select formControlName="sort">
+        @for (option of sortOptions; track option) {
+          <option [ngValue]="option">{{ sortLabel[option] }}</option>
+        }
+      </select>
+    </label>
+
+    <label class="select">
+      <span>Then by</span>
+      <select formControlName="thenBy">
+        <option [ngValue]="null">Nothing</option>
+        @for (option of thenByOptions(); track option) {
+          <option [ngValue]="option">{{ sortLabel[option] }}</option>
+        }
+      </select>
+    </label>
+
+    @if (activeCount()) {
+      <button
+        class="tf-btn tf-btn--ghost tf-btn--sm clear"
+        type="button"
+        (click)="clear()"
+      >
+        Clear filters ({{ activeCount() }})
+      </button>
+    }
+  </div>
+</form>
