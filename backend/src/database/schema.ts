@@ -9,6 +9,7 @@ import {
   serial,
   text,
   timestamp,
+  unique,
   varchar,
 } from 'drizzle-orm/pg-core';
 
@@ -266,3 +267,45 @@ export const aiScreeningsRelations = relations(aiScreenings, ({ one }) => ({
 
 export type AiScreening = typeof aiScreenings.$inferSelect;
 export type ScreeningStatus = (typeof screeningStatusEnum.enumValues)[number];
+
+/* ---------------------------------------------------------------- Sprint 5 */
+
+/**
+ * A recruiter assigned to a job posting (API spec III). Each recruiter is
+ * assigned to a posting at most once. Removed with the posting or the user.
+ */
+export const jobAssignments = pgTable(
+  'job_assignments',
+  {
+    id: serial('id').primaryKey(),
+    job_posting_id: integer('job_posting_id')
+      .notNull()
+      .references(() => jobPostings.id, { onDelete: 'cascade' }),
+    user_id: integer('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    assigned_at: timestamp('assigned_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    unique('job_assignments_posting_user_unique').on(
+      t.job_posting_id,
+      t.user_id,
+    ),
+    index('job_assignments_user_idx').on(t.user_id),
+  ],
+);
+
+export const jobAssignmentsRelations = relations(jobAssignments, ({ one }) => ({
+  posting: one(jobPostings, {
+    fields: [jobAssignments.job_posting_id],
+    references: [jobPostings.id],
+  }),
+  user: one(users, {
+    fields: [jobAssignments.user_id],
+    references: [users.id],
+  }),
+}));
+
+export type JobAssignment = typeof jobAssignments.$inferSelect;

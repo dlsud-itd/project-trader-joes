@@ -1,0 +1,90 @@
+:host {
+  display: block;
+  margin-top: 12px;
+}
+
+.team {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+
+  &__label {
+    color: var(--tf-muted);
+    font-size: 12.5px;
+    font-weight: 600;
+  }
+
+  &__list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__none {
+    color: var(--tf-muted);
+    font-size: 12.5px;
+  }
+
+  &__add {
+    display: inline-flex;
+    gap: 6px;
+
+    select {
+      height: 30px;
+      padding: 0 8px;
+      border: 1px solid var(--tf-line);
+      border-radius: var(--tf-radius-sm);
+      background: var(--tf-surface);
+      font-size: 12.5px;
+    }
+  }
+}
+
+.person {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: var(--tf-bg);
+  color: var(--tf-ink-soft);
+  font-size: 12.5px;
+  font-weight: 600;
+
+  &.is-you {
+    background: var(--tf-accent-soft);
+    color: var(--tf-accent-strong);
+  }
+
+  &__you {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  &__remove {
+    display: grid;
+    place-items: center;
+    width: 18px;
+    height: 18px;
+    margin-right: -4px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: none;
+    color: var(--tf-muted);
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+      background: var(--tf-danger-soft);
+      color: var(--tf-danger);
+    }
+  }
+}
