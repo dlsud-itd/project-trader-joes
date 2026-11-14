@@ -8,6 +8,7 @@ import { ResumesModule } from './resumes/resumes.module.js';
 import { UsersModule } from './users/users.module.js';
 import { ApplicationsModule } from './applications/applications.module.js';
 import { AiScreeningsModule } from './ai-screenings/ai-screenings.module.js';
+import { JobAssignmentsModule } from './job-assignments/job-assignments.module.js';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { AiScreeningsModule } from './ai-screenings/ai-screenings.module.js';
     JobPostingsModule,
     ApplicationsModule,
     AiScreeningsModule,
+    JobAssignmentsModule,
   ],
   controllers: [HealthController],
 })

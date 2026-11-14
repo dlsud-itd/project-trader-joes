@@ -12,6 +12,8 @@ import { JobPosting, JobPostingStatus } from '../../core/job-postings';
 import { Postings } from './postings';
 
 const API = `${environment.apiUrl}/job-postings`;
+const ASSIGNMENTS_API = `${environment.apiUrl}/job-assignments`;
+const USERS_API = `${environment.apiUrl}/users`;
 
 const posting = (overrides: Partial<JobPosting>): JobPosting => ({
   id: 1,
@@ -46,13 +48,19 @@ describe('Postings page', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         provideRouter([]),
-        { provide: AuthService, useValue: { hasRole: () => isManager } },
+        {
+          provide: AuthService,
+          useValue: { hasRole: () => isManager, user: () => null },
+        },
       ],
     });
     fixture = TestBed.createComponent(Postings);
     http = TestBed.inject(HttpTestingController);
     fixture.detectChanges();
     http.expectOne(API).flush(list);
+    // Recruiter assignments load beside the postings; none here.
+    http.expectOne(ASSIGNMENTS_API).flush([]);
+    if (isManager) http.expectOne(USERS_API).flush([]);
     await fixture.whenStable();
     fixture.detectChanges();
   }

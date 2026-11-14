@@ -160,6 +160,16 @@
               {{ posting.updated_at | date: 'mediumDate' }}
             }
           </p>
+          <app-posting-assignments
+            [postingTitle]="posting.title"
+            [assignments]="assignmentsFor(posting)"
+            [recruiters]="recruiters()"
+            [canManage]="canManage()"
+            [isBusy]="pendingIds().has(posting.id)"
+            [currentUserId]="currentUserId()"
+            (assign)="assign(posting, $event)"
+            (unassign)="unassign(posting, $event)"
+          />
         </div>
 
         @if (canManage()) {

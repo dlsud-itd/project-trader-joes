@@ -15,8 +15,14 @@ import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { apiErrorMessage } from '../../core/api/api-error';
-import { UserRole } from '../../core/auth/auth.models';
+import { User, UserRole } from '../../core/auth/auth.models';
 import { AuthService } from '../../core/auth/auth.service';
+import {
+  fullName,
+  JobAssignment,
+  JobAssignmentsService,
+  JobAssignmentWithUser,
+} from '../../core/job-assignments';
 import {
   JobPosting,
   JobPostingResponse,
@@ -25,6 +31,8 @@ import {
   STATUS_LABELS,
   splitRequirements,
 } from '../../core/job-postings';
+import { UsersService } from '../../core/users';
+import { PostingAssignments } from './posting-assignments';
 
 /** Status tabs above the list. Values match JobPostingStatus. */
 enum PostingFilter {
@@ -37,18 +45,31 @@ type RequirementsPreview = { shown: string[]; more: number };
 
 const PREVIEW_REQUIREMENTS = 4;
 
+const NO_ASSIGNMENTS: JobAssignmentWithUser[] = [];
+
+/** Shown when the API gives no reason of its own. */
+enum AssignmentError {
+  ASSIGN = 'Could not assign the recruiter.',
+  REMOVE = 'Could not remove the recruiter.',
+  LOAD_ASSIGNMENTS = 'Could not load recruiter assignments.',
+  LOAD_RECRUITERS = 'Could not load the recruiters.',
+}
+
 /**
- * Lists every job posting for signed-in staff.
- * Managers can also create, edit, open or close, and delete postings here.
+ * Lists every job posting for signed-in staff, with the recruiters assigned
+ * to each (WBS 4.5.2.1). Managers can also create, edit, open or close, and
+ * delete postings, and assign recruiters to them here.
  */
 @Component({
   selector: 'app-postings',
-  imports: [DatePipe, ReactiveFormsModule, RouterLink],
+  imports: [DatePipe, ReactiveFormsModule, RouterLink, PostingAssignments],
   templateUrl: './postings.html',
   styleUrl: './postings.scss',
 })
 export class Postings implements OnInit {
   private readonly postingsApi = inject(JobPostingsService);
+  private readonly assignmentsApi = inject(JobAssignmentsService);
+  private readonly usersApi = inject(UsersService);
   protected readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
@@ -77,6 +98,24 @@ export class Postings implements OnInit {
   private readonly highlightId = signal<number | null>(null);
   private readonly query = toSignal(this.searchControl.valueChanges, {
     initialValue: '',
+  });
+
+  protected readonly assignments = signal<JobAssignmentWithUser[]>([]);
+  /** Recruiters a manager can assign; recruiters can't list accounts. */
+  protected readonly recruiters = signal<User[]>([]);
+  protected readonly currentUserId = computed(
+    () => this.auth.user()?.id ?? null,
+  );
+
+  private readonly assignmentsByPosting = computed(() => {
+    const byPosting = new Map<number, JobAssignmentWithUser[]>();
+    for (const a of this.assignments()) {
+      byPosting.set(a.job_posting_id, [
+        ...(byPosting.get(a.job_posting_id) ?? []),
+        a,
+      ]);
+    }
+    return byPosting;
   });
 
   private readonly dialog =
@@ -141,6 +180,90 @@ export class Postings implements OnInit {
         error: (err: unknown) =>
           this.loadError.set(
             apiErrorMessage(err, 'Could not load job postings.'),
+          ),
+      });
+    this.loadAssignments();
+  }
+
+  protected assignmentsFor(posting: JobPosting): JobAssignmentWithUser[] {
+    return this.assignmentsByPosting().get(posting.id) ?? NO_ASSIGNMENTS;
+  }
+
+  protected assign(posting: JobPosting, userId: number): void {
+    const recruiter = this.recruiters().find((r: User) => r.id === userId);
+    if (!recruiter) return;
+    this.startAction(posting);
+    this.assignmentsApi
+      .assign(posting.id, userId)
+      .pipe(
+        finalize(() => this.endAction(posting)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (created: JobAssignment) => {
+          this.assignments.update((list: JobAssignmentWithUser[]) => [
+            ...list,
+            { ...created, user: recruiter },
+          ]);
+          this.flash.set(
+            `${fullName(recruiter)} was assigned to “${posting.title}”.`,
+          );
+        },
+        error: (err: unknown) =>
+          this.actionError.set(apiErrorMessage(err, AssignmentError.ASSIGN)),
+      });
+  }
+
+  protected unassign(
+    posting: JobPosting,
+    assignment: JobAssignmentWithUser,
+  ): void {
+    this.startAction(posting);
+    this.assignmentsApi
+      .remove(assignment.id)
+      .pipe(
+        finalize(() => this.endAction(posting)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: () => {
+          this.assignments.update((list: JobAssignmentWithUser[]) =>
+            list.filter((a: JobAssignmentWithUser) => a.id !== assignment.id),
+          );
+          this.flash.set(
+            `${fullName(assignment.user)} was removed from ` +
+              `“${posting.title}”.`,
+          );
+        },
+        error: (err: unknown) =>
+          this.actionError.set(apiErrorMessage(err, AssignmentError.REMOVE)),
+      });
+  }
+
+  /** Assignments for every staff member; recruiters to pick for managers. */
+  private loadAssignments(): void {
+    this.assignmentsApi
+      .list()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (list: JobAssignmentWithUser[]) => this.assignments.set(list),
+        error: (err: unknown) =>
+          this.actionError.set(
+            apiErrorMessage(err, AssignmentError.LOAD_ASSIGNMENTS),
+          ),
+      });
+    if (!this.canManage()) return;
+    this.usersApi
+      .list()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (list: User[]) =>
+          this.recruiters.set(
+            list.filter((u: User) => u.role === UserRole.RECRUITER),
+          ),
+        error: (err: unknown) =>
+          this.actionError.set(
+            apiErrorMessage(err, AssignmentError.LOAD_RECRUITERS),
           ),
       });
   }

@@ -43,6 +43,13 @@
       "when": 1793430063590,
       "tag": "0005_add-applicant-role",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794659361864,
+      "tag": "0006_job_assignments",
+      "breakpoints": true
     }
   ]
 }

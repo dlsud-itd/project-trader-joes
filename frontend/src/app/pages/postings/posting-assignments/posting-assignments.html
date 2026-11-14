@@ -1,0 +1,50 @@
+<div class="team">
+  <span class="team__label">Recruiters</span>
+
+  <ul class="team__list" aria-label="Assigned recruiters">
+    @for (a of assignments(); track a.id) {
+      <li class="person" [class.is-you]="isYou(a)">
+        {{ fullName(a.user) }}
+        @if (isYou(a)) {
+          <span class="person__you">You</span>
+        }
+        @if (canManage()) {
+          <button
+            type="button"
+            class="person__remove"
+            [attr.aria-label]="
+              'Remove ' + fullName(a.user) + ' from ' + postingTitle()
+            "
+            [disabled]="isBusy()"
+            (click)="unassign.emit(a)"
+          >
+            ×
+          </button>
+        }
+      </li>
+    } @empty {
+      <li class="team__none">No recruiters assigned</li>
+    }
+  </ul>
+
+  @if (canManage() && available().length) {
+    <form class="team__add" [formGroup]="form" (ngSubmit)="submit()">
+      <select
+        formControlName="recruiter"
+        [attr.aria-label]="'Recruiter to assign to ' + postingTitle()"
+      >
+        <option [ngValue]="null" disabled>Add recruiter…</option>
+        @for (r of available(); track r.id) {
+          <option [ngValue]="r.id">{{ fullName(r) }}</option>
+        }
+      </select>
+      <button
+        class="tf-btn tf-btn--ghost tf-btn--sm"
+        type="submit"
+        [disabled]="isBusy() || form.invalid"
+      >
+        Assign
+      </button>
+    </form>
+  }
+</div>
