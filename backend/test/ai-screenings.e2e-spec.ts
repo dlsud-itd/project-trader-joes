@@ -8,6 +8,7 @@ import {
   GeminiError,
   GeminiFailure,
 } from '../src/ai-screenings/gemini.client.js';
+import { MAX_SCREENING_RETRIES } from '../src/ai-screenings/ai-screenings.constants.js';
 import { FAILURE_REASONS } from '../src/ai-screenings/screening-failure.js';
 import { AppModule } from '../src/app.module.js';
 import { HttpExceptionFilter } from '../src/common/filters/http-exception.filter.js';
@@ -237,6 +238,27 @@ describe('AI screenings (e2e)', () => {
       retry_count: 1,
       failure_reason: null,
     });
+  });
+
+  it('stops retrying once the limit is reached, without calling Gemini again', async () => {
+    gemini.generateJson.mockResolvedValue(goodReply);
+    const id = await apply();
+    await screen(id).expect(200); // retry_count 0, the initial screening
+
+    for (let i = 0; i < MAX_SCREENING_RETRIES; i++) {
+      await screen(id, true).expect(200);
+    }
+    expect(gemini.generateJson).toHaveBeenCalledTimes(MAX_SCREENING_RETRIES + 1);
+
+    const blocked = await screen(id, true).expect(409);
+    expect(blocked.body.error).toMatch(/retry limit/i);
+    expect(gemini.generateJson).toHaveBeenCalledTimes(MAX_SCREENING_RETRIES + 1);
+
+    const saved = await api()
+      .get(`/api/ai-screenings/${id}`)
+      .set(manager)
+      .expect(200);
+    expect(saved.body.retry_count).toBe(MAX_SCREENING_RETRIES);
   });
 
   it('screens the same application once when asked twice at once', async () => {

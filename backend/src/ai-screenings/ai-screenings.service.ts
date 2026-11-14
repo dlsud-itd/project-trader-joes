@@ -5,12 +5,17 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  ServiceUnavailableException,
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
 import { DB, type Database } from '../database/database.module.js';
 import { aiScreenings, applications } from '../database/schema.js';
 import { ResumeTextService } from '../resumes/resume-text.service.js';
+import {
+  MAX_SCREENING_QUEUE_SIZE,
+  MAX_SCREENING_RETRIES,
+} from './ai-screenings.constants.js';
 import { GeminiClient } from './gemini.client.js';
 import { failureReason, MissingResumeTextError } from './screening-failure.js';
 import {
@@ -43,6 +48,11 @@ export class AiScreeningsService {
    * Screenings wait their turn in the queue.
    */
   screen(applicationId: number, retry: boolean) {
+    if (this.queue.size >= MAX_SCREENING_QUEUE_SIZE) {
+      throw new ServiceUnavailableException(
+        'Screening is busy right now. Try again in a moment.',
+      );
+    }
     if (this.queue.size > 0) {
       this.logger.log(
         `Screening ${applicationId} waits behind ${this.queue.size}.`,
@@ -85,6 +95,11 @@ export class AiScreeningsService {
       );
     }
     const retry_count = previous ? previous.retry_count + 1 : 0;
+    if (retry_count > MAX_SCREENING_RETRIES) {
+      throw new ConflictException(
+        `This application has reached its retry limit (${MAX_SCREENING_RETRIES}). No more screenings can be run for it.`,
+      );
+    }
 
     try {
       // Text missing from upload time (an old upload or a failed read) is
