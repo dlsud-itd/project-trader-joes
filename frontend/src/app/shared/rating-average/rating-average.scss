@@ -1,0 +1,23 @@
+.avg {
+  display: inline-flex;
+  gap: 4px;
+  align-items: baseline;
+  font-weight: 600;
+  color: var(--tf-ink);
+  white-space: nowrap;
+
+  &.is-empty {
+    color: var(--tf-muted);
+    font-weight: 400;
+  }
+}
+
+.avg__star {
+  color: var(--tf-amber);
+}
+
+.avg__count {
+  font-size: 0.85em;
+  font-weight: 400;
+  color: var(--tf-muted);
+}

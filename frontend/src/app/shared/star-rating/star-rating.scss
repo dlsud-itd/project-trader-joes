@@ -1,0 +1,50 @@
+:host {
+  display: inline-block;
+}
+
+.stars {
+  display: inline-flex;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+
+  &:disabled .star {
+    cursor: default;
+    opacity: 0.6;
+  }
+}
+
+.star {
+  padding: 2px;
+  border-radius: var(--tf-radius-sm);
+  color: var(--tf-line);
+  font-size: 26px;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    color 0.1s,
+    transform 0.1s;
+
+  &.is-on {
+    color: var(--tf-amber);
+  }
+
+  &:hover {
+    transform: scale(1.1);
+  }
+
+  /* Keyboard focus lands on the hidden radio; show it on the star. */
+  &:has(input:focus-visible) {
+    box-shadow: var(--tf-focus);
+  }
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

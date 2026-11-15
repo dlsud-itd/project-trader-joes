@@ -27,6 +27,7 @@ const row: ApplicationRow = {
   submitted_at: '2026-10-21T02:10:00Z',
   resume: null,
   screening: null,
+  rating: { average: null, count: 0 },
 };
 
 describe('ApplicationsService', () => {

@@ -26,6 +26,7 @@
       </p>
     </div>
     <div class="hero__side">
+      <app-rating-average [rating]="a.rating" />
       <span class="tf-stage" [class]="'tf-stage--' + a.kanban_stage">{{
         a.kanban_stage
       }}</span>
@@ -88,6 +89,11 @@
         [busy]="isScoring()"
         (run)="score()"
         (retry)="score()"
+      />
+
+      <app-notes-and-rating
+        [applicationId]="a.id"
+        (ratingChange)="updateRating($event)"
       />
     </div>
 

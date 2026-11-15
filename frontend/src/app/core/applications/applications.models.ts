@@ -1,5 +1,6 @@
 import { AiScreening } from '../ai-screenings';
 import { ResumeSummary } from '../resumes';
+import { RatingAverage } from '../reviews';
 
 /** Pipeline stages, in board order. Values match what the API sends. */
 export enum KanbanStage {
@@ -42,4 +43,6 @@ export type ApplicationRow = {
   resume: ResumeSummary | null;
   /** Null until the resume has been screened. */
   screening: AiScreening | null;
+  /** The team's average star rating; `average` is null until someone rates. */
+  rating: RatingAverage;
 };

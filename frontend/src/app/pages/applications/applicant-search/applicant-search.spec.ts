@@ -123,6 +123,29 @@ describe('sortApplications', () => {
     expect(low[0]).toBe('Daniel Okafor');
   });
 
+  it('sorts by team rating with unrated applicants last either way', () => {
+    const rated = ['Mei-Lin Chen', 'Aisha Rahman', 'Jonah Reyes'];
+    const high = names(
+      sortApplications(TEST_APPLICATIONS, [SortOption.RATING_HIGH]),
+    );
+    const low = names(
+      sortApplications(TEST_APPLICATIONS, [SortOption.RATING_LOW]),
+    );
+    expect(high.slice(0, 5)).toEqual([
+      ...rated,
+      'Kenji Watanabe',
+      'Daniel Okafor',
+    ]);
+    expect(low.slice(0, 5)).toEqual([
+      'Daniel Okafor',
+      'Kenji Watanabe',
+      ...[...rated].reverse(),
+    ]);
+    const unrated = ['Hana Kim', 'Lucas Martin', 'Sofia Alvarez'];
+    expect(high.slice(-3).sort()).toEqual(unrated);
+    expect(low.slice(-3).sort()).toEqual(unrated);
+  });
+
   it('sorts by date and by name', () => {
     expect(
       names(sortApplications(TEST_APPLICATIONS, [SortOption.NEWEST]))[0],

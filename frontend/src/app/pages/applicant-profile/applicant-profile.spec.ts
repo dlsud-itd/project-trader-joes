@@ -64,7 +64,21 @@ describe('Applicant profile page', () => {
     fixture.detectChanges();
   }
 
-  afterEach(() => http.verify());
+  afterEach(() => {
+    // The Notes and rating card loads on its own; its spec tests it.
+    http.match((req) => /\/(notes|rating)$/.test(req.url));
+    http.verify();
+  });
+
+  it('shows the team rating and the Notes and rating card', async () => {
+    renderLoaded(WITH_RESUME);
+    http.expectOne(`${API}/resumes/101/file`).flush(new Blob(['%PDF']));
+
+    const badge = el().querySelector('.hero app-rating-average');
+    expect(badge?.textContent).toContain('4.5');
+    expect(el().querySelector('app-notes-and-rating')).not.toBeNull();
+    expect(text()).toContain('Notes and rating');
+  });
 
   it('loads the applicant from the API', async () => {
     render(WITH_RESUME);

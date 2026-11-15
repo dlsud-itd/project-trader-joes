@@ -1,0 +1,25 @@
+<fieldset
+  class="stars"
+  [disabled]="disabled()"
+  (mouseleave)="preview.set(null)"
+>
+  <legend class="visually-hidden">{{ label() }}</legend>
+  @for (star of stars; track star) {
+    <label
+      class="star"
+      [class.is-on]="star <= shown()"
+      (mouseenter)="preview.set(star)"
+    >
+      <input
+        type="radio"
+        class="visually-hidden"
+        [name]="name"
+        [value]="star"
+        [checked]="star === value()"
+        (change)="choose(star)"
+      />
+      <span aria-hidden="true">★</span>
+      <span class="visually-hidden">{{ starLabel(star) }}</span>
+    </label>
+  }
+</fieldset>

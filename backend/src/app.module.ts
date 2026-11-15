@@ -9,7 +9,7 @@ import { UsersModule } from './users/users.module.js';
 import { ApplicationsModule } from './applications/applications.module.js';
 import { AiScreeningsModule } from './ai-screenings/ai-screenings.module.js';
 import { JobAssignmentsModule } from './job-assignments/job-assignments.module.js';
-
+import { ReviewsModule } from './reviews/reviews.module.js';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -21,6 +21,7 @@ import { JobAssignmentsModule } from './job-assignments/job-assignments.module.j
     ApplicationsModule,
     AiScreeningsModule,
     JobAssignmentsModule,
+    ReviewsModule,
   ],
   controllers: [HealthController],
 })

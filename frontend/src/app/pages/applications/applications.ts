@@ -30,6 +30,7 @@ import {
 import { UserRole } from '../../core/auth/auth.models';
 import { AuthService } from '../../core/auth/auth.service';
 import { FitScoreBadge } from '../../shared/fit-score-badge';
+import { RatingAverageBadge } from '../../shared/rating-average';
 import { ApplicantDetail } from './applicant-detail';
 import {
   ApplicantQuery,
@@ -78,6 +79,7 @@ export const NO_RESUME_MESSAGE =
     DatePipe,
     NgTemplateOutlet,
     FitScoreBadge,
+    RatingAverageBadge,
     ApplicantDetail,
     ApplicationsBoard,
     SearchToolbar,
