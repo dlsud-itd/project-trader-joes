@@ -16,9 +16,10 @@ import {
   RESUME_MIME_TYPE,
   type UploadedResumeFile,
 } from './resume-file.js';
+import { ResumeStorage } from './resume-storage.js';
 import { ResumeTextService } from './resume-text.service.js';
 
-/** Every column except the file bytes, which are only read for downloads. */
+/** Every column except where the file is, which only downloads need. */
 const resumeInfo = {
   id: resumes.id,
   application_id: resumes.application_id,
@@ -36,11 +37,13 @@ export class ResumesService {
   constructor(
     @Inject(DB) private readonly db: Database,
     private readonly resumeText: ResumeTextService,
+    private readonly storage: ResumeStorage,
   ) {}
 
   /**
    * Checks the file, stores it, then reads its text for AI screening.
-   * Each application has one resume.
+   * Each application has one resume. The PDF goes to Appwrite when it is
+   * set up, otherwise into the database.
    */
   async upload(applicationId: number, file: UploadedResumeFile | undefined) {
     if (!file || file.size === 0) {
@@ -65,26 +68,37 @@ export class ResumesService {
       );
     }
 
-    const saved = await this.db.transaction(async (tx) => {
-      const [created] = await tx
-        .insert(resumes)
-        .values({
-          application_id: applicationId,
-          file_url: '',
-          file_name: cleanFileName(file.originalname),
-          mime_type: RESUME_MIME_TYPE,
-          size_bytes: file.size,
-          data: file.buffer,
-        })
-        .returning({ id: resumes.id });
-      // The download link needs the new id, so it is set right after insert.
-      const [updated] = await tx
-        .update(resumes)
-        .set({ file_url: `/api/resumes/${created.id}/file` })
-        .where(eq(resumes.id, created.id))
-        .returning(resumeInfo);
-      return updated;
-    });
+    const fileName = cleanFileName(file.originalname);
+    const fileId = this.storage.isEnabled() ? this.storage.newFileId() : null;
+    if (fileId) await this.storage.upload(fileId, file.buffer, fileName);
+
+    const saved = await this.db
+      .transaction(async (tx) => {
+        const [created] = await tx
+          .insert(resumes)
+          .values({
+            application_id: applicationId,
+            file_url: '',
+            file_name: fileName,
+            mime_type: RESUME_MIME_TYPE,
+            size_bytes: file.size,
+            storage_file_id: fileId,
+            data: fileId ? null : file.buffer,
+          })
+          .returning({ id: resumes.id });
+        // The download link needs the new id, so it is set right after insert.
+        const [updated] = await tx
+          .update(resumes)
+          .set({ file_url: `/api/resumes/${created.id}/file` })
+          .where(eq(resumes.id, created.id))
+          .returning(resumeInfo);
+        return updated;
+      })
+      .catch(async (err: unknown) => {
+        // Don't leave a file in the bucket that no resume points to.
+        if (fileId) await this.removeQuietly(fileId);
+        throw err;
+      });
 
     // The file is already saved, so a failure here must not fail the upload:
     // screening reads the text again when it is missing.
@@ -96,17 +110,28 @@ export class ResumesService {
     return saved;
   }
 
+  /** Cleanup after a failed save; a failure here is only logged. */
+  private async removeQuietly(fileId: string): Promise<void> {
+    await this.storage
+      .remove(fileId)
+      .catch((err: unknown) =>
+        this.logger.error(`File ${fileId}: not removed`, err),
+      );
+  }
+
   /** The file bytes and what to call them, for staff downloads. */
   async getFile(id: number) {
-    const [file] = await this.db
+    const [row] = await this.db
       .select({
         file_name: resumes.file_name,
         mime_type: resumes.mime_type,
+        storage_file_id: resumes.storage_file_id,
         data: resumes.data,
       })
       .from(resumes)
       .where(eq(resumes.id, id));
-    if (!file) throw new NotFoundException('Resume not found.');
-    return file;
+    if (!row) throw new NotFoundException('Resume not found.');
+    const data = await this.storage.read(row);
+    return { file_name: row.file_name, mime_type: row.mime_type, data };
   }
 }

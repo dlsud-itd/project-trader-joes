@@ -24,8 +24,10 @@
     "db:seed": "tsx src/database/seed.ts",
     "db:backup": "tsx src/database/backup.ts",
     "db:restore": "tsx src/database/restore.ts",
+    "resumes:move-to-storage": "tsx src/database/move-resumes-to-storage.ts",
     "db:studio": "drizzle-kit studio",
-    "ai:poc": "tsx scripts/ai-proof-of-concept.ts"
+    "ai:poc": "tsx scripts/ai-proof-of-concept.ts",
+    "ai:edge-audit": "tsx scripts/ai-edge-case-audit.ts"
   },
   "dependencies": {
     "@nestjs/common": "^12.0.1",

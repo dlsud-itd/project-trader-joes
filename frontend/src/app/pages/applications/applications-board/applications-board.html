@@ -83,3 +83,16 @@
     </section>
   }
 </div>
+
+<!-- Always present so screen readers announce each new notice -->
+<p class="notice" role="status" aria-live="polite">
+  @if (notice(); as message) {
+    <span class="notice__text">
+      <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true">
+        <rect x="2.5" y="4.5" width="15" height="11" rx="2" />
+        <path d="M3 5.5l7 5.5 7-5.5" />
+      </svg>
+      {{ message }}
+    </span>
+  }
+</p>

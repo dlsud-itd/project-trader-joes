@@ -1,0 +1,169 @@
+<div class="bar">
+  <button
+    class="tf-btn tf-btn--ghost tf-btn--sm"
+    type="button"
+    (click)="back.emit()"
+  >
+    ← Back to list
+  </button>
+  <h2>Comparing {{ rows().length }} applicants</h2>
+</div>
+
+<div class="scroll">
+  <table class="compare" [class]="'cols-' + rows().length">
+    <thead>
+      <tr>
+        <td class="corner"></td>
+        @for (row of rows(); track row.id) {
+          <th scope="col">
+            <div class="who">
+              <span class="avatar" aria-hidden="true">{{
+                initials(row.full_name)
+              }}</span>
+              <span class="who__text">
+                <a class="who__name" [routerLink]="[profilePath, row.id]">{{
+                  row.full_name
+                }}</a>
+                <span class="who__sub">{{ row.posting_title }}</span>
+              </span>
+              @if (canRemove()) {
+                <button
+                  class="remove"
+                  type="button"
+                  [attr.aria-label]="
+                    'Remove ' + row.full_name + ' from compare'
+                  "
+                  (click)="remove.emit(row.id)"
+                >
+                  ×
+                </button>
+              }
+            </div>
+          </th>
+        }
+      </tr>
+    </thead>
+
+    <tbody>
+      <tr>
+        <th scope="row">AI fit</th>
+        @for (row of rows(); track row.id) {
+          <td class="fit">
+            <app-fit-score-badge
+              variant="hero"
+              [score]="row.screening?.fit_score"
+              [status]="row.screening?.status"
+            />
+            @if (best().has(row.id)) {
+              <span class="best">Highest fit</span>
+            }
+          </td>
+        }
+      </tr>
+
+      <tr>
+        <th scope="row">Team rating</th>
+        @for (row of rows(); track row.id) {
+          <td>
+            @if (row.rating.average !== null) {
+              <app-rating-average [rating]="row.rating" />
+            } @else {
+              <span class="muted">Not rated yet</span>
+            }
+          </td>
+        }
+      </tr>
+
+      <tr>
+        <th scope="row">Stage</th>
+        @for (row of rows(); track row.id) {
+          <td>
+            <span class="tf-stage" [class]="'tf-stage--' + row.kanban_stage">{{
+              row.kanban_stage
+            }}</span>
+          </td>
+        }
+      </tr>
+
+      <tr>
+        <th scope="row">Applied</th>
+        @for (row of rows(); track row.id) {
+          <td>{{ row.submitted_at | date: 'MMM d, y' }}</td>
+        }
+      </tr>
+
+      <tr>
+        <th scope="row">Resume</th>
+        @for (row of rows(); track row.id) {
+          <td>
+            @if (row.resume; as resume) {
+              {{ resume.file_name }}
+            } @else {
+              <span class="muted">Not uploaded</span>
+            }
+          </td>
+        }
+      </tr>
+
+      <tr>
+        <th scope="row">AI summary</th>
+        @for (row of rows(); track row.id) {
+          <td class="summary">
+            @if (isScreened(row)) {
+              {{ row.screening?.explanation }}
+            } @else {
+              <span class="muted">Not scored yet</span>
+            }
+          </td>
+        }
+      </tr>
+
+      @if (requirements().length) {
+        <tr class="group">
+          <th scope="rowgroup" [attr.colspan]="rows().length + 1">
+            Requirements
+          </th>
+        </tr>
+        @for (line of requirements(); track line.requirement) {
+          <tr>
+            <th scope="row" class="req">{{ line.requirement }}</th>
+            @for (match of line.matches; track $index) {
+              <td>
+                @if (match) {
+                  <span
+                    class="match"
+                    [class]="'match--' + match.match"
+                    [title]="match.evidence"
+                    >{{ matchLabel[match.match] }}</span
+                  >
+                } @else {
+                  <span class="muted">—</span>
+                }
+              </td>
+            }
+          </tr>
+        }
+      }
+
+      <tr>
+        <th scope="row">Contact</th>
+        @for (row of rows(); track row.id) {
+          <td class="contact">
+            <a [href]="'mailto:' + row.email">{{ row.email }}</a>
+            @if (row.phone) {
+              <span>{{ row.phone }}</span>
+            }
+          </td>
+        }
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+@if (requirements().length) {
+  <p class="note">
+    Hover a match to see the resume line behind it. A dash means that
+    applicant's posting didn't list the requirement or their resume isn't scored
+    yet.
+  </p>
+}

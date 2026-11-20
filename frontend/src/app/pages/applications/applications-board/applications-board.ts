@@ -5,8 +5,10 @@ import {
   CdkDropListGroup,
 } from '@angular/cdk/drag-drop';
 import { DatePipe } from '@angular/common';
-import { Component, computed, input, output } from '@angular/core';
+import { Component, computed, input, output, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
+import { concat, map, of, Subject, switchMap, timer } from 'rxjs';
 import { AppPath } from '../../../core/app-paths';
 import {
   ApplicationRow,
@@ -20,6 +22,20 @@ import { initials } from '../initials';
 
 /** Applied date on each card, e.g. "Nov 6". */
 const CARD_DATE_FORMAT = 'MMM d';
+
+/** Moving an applicant to these stages emails them (see the backend). */
+export const NOTIFIED_STAGES: readonly KanbanStage[] = [
+  KanbanStage.INTERVIEW,
+  KanbanStage.OFFER,
+  KanbanStage.REJECTED,
+];
+
+/** How long the "will be emailed" notice stays up. */
+export const NOTICE_MS = 4_000;
+
+/** The notice shown after moving an applicant to a notified stage. */
+export const emailNotice = ({ row, stage }: StageMove): string =>
+  `${row.full_name} will be emailed about the move to ${stage}.`;
 
 /** A request to move one applicant to another stage. */
 export type StageMove = {
@@ -62,6 +78,21 @@ export class ApplicationsBoard {
 
   readonly move = output<StageMove>();
 
+  /** "Will be emailed" notice; a newer move replaces the one showing. */
+  protected readonly notice = signal<string | null>(null);
+  private readonly notices = new Subject<string>();
+
+  constructor() {
+    this.notices
+      .pipe(
+        switchMap((message: string) =>
+          concat(of(message), timer(NOTICE_MS).pipe(map(() => null))),
+        ),
+        takeUntilDestroyed(),
+      )
+      .subscribe((message: string | null) => this.notice.set(message));
+  }
+
   protected readonly stages = KANBAN_STAGES;
   protected readonly initials = initials;
   protected readonly profilePath = AppPath.APPLICATIONS;
@@ -96,6 +127,8 @@ export class ApplicationsBoard {
 
   private moveTo(row: ApplicationRow, stage: KanbanStage): void {
     if (row.kanban_stage === stage) return;
-    this.move.emit({ row, stage });
+    const move: StageMove = { row, stage };
+    this.move.emit(move);
+    if (NOTIFIED_STAGES.includes(stage)) this.notices.next(emailNotice(move));
   }
 }

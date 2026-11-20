@@ -3,10 +3,12 @@ import {
   Component,
   computed,
   DestroyRef,
+  effect,
   ElementRef,
   inject,
   OnInit,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
@@ -35,6 +37,15 @@ import {
 } from '../../core/job-assignments';
 import { FitScoreBadge } from '../../shared/fit-score-badge';
 import { RatingAverageBadge } from '../../shared/rating-average';
+import {
+  ApplicantCompare,
+  COMPARE_PARAM,
+  compareParam,
+  MAX_COMPARE,
+  MIN_COMPARE,
+  parseCompareIds,
+  pickRows,
+} from './applicant-compare';
 import { ApplicantDetail } from './applicant-detail';
 import {
   ApplicantQuery,
@@ -90,6 +101,8 @@ export const NO_RESUME_MESSAGE =
  * applicant; the Board view groups applicants by pipeline stage, where
  * managers drag them between stages (WBS 4.4.2, 4.4.3). Both views share
  * the search, filters, two-level sort, and quick filters (WBS 4.5.1.1).
+ * Ticking applicants and pressing Compare opens them side by side in the
+ * page, with Back to list (WBS 4.5.3.1).
  */
 @Component({
   selector: 'app-applications',
@@ -98,6 +111,7 @@ export const NO_RESUME_MESSAGE =
     NgTemplateOutlet,
     FitScoreBadge,
     RatingAverageBadge,
+    ApplicantCompare,
     ApplicantDetail,
     ApplicationsBoard,
     SearchToolbar,
@@ -139,6 +153,25 @@ export class Applications implements OnInit {
   protected readonly assigned = signal<ReadonlySet<number> | null>(null);
   /** Applications with a stage change still saving. */
   protected readonly moving = signal<ReadonlySet<number>>(new Set());
+
+  /** Ids in `?compare=`; the compare view shows while there are any. */
+  protected readonly compareIds = toSignal(
+    this.route.queryParamMap.pipe(
+      map((params: ParamMap) => parseCompareIds(params.get(COMPARE_PARAM))),
+    ),
+    { initialValue: [] },
+  );
+  protected readonly isComparing = computed(() => this.compareIds().length > 0);
+  /** Ticked applicants, in the order they were ticked. */
+  protected readonly picked = signal<readonly number[]>([]);
+  protected readonly compared = computed(() =>
+    pickRows(this.rows(), this.compareIds()),
+  );
+  protected readonly minCompare = MIN_COMPARE;
+  protected readonly maxCompare = MAX_COMPARE;
+  protected readonly isPickFull = computed(
+    () => this.picked().length >= MAX_COMPARE,
+  );
 
   protected readonly rows = signal<ApplicationRow[]>([]);
   protected readonly isLoading = signal(true);
@@ -204,6 +237,15 @@ export class Applications implements OnInit {
 
   /** The filter params last applied, so switching views keeps your edits. */
   private appliedParamsKey = '';
+
+  constructor() {
+    // A shared or refreshed compare link ticks the same applicants, so
+    // Back to list keeps them picked.
+    effect(() => {
+      const ids = this.compareIds();
+      if (ids.length) untracked(() => this.picked.set(ids));
+    });
+  }
 
   ngOnInit(): void {
     this.followFilterLinks();
@@ -318,6 +360,49 @@ export class Applications implements OnInit {
         error: (err: unknown) =>
           this.actionError.set(apiErrorMessage(err, SCORE_FAILED_MESSAGE)),
       });
+  }
+
+  protected isPicked(id: number): boolean {
+    return this.picked().includes(id);
+  }
+
+  /** Ticks or unticks an applicant for Compare; up to four at a time. */
+  protected togglePick(row: ApplicationRow): void {
+    this.picked.update((ids: readonly number[]) => {
+      if (ids.includes(row.id)) {
+        return ids.filter((id: number) => id !== row.id);
+      }
+      return ids.length < MAX_COMPARE ? [...ids, row.id] : ids;
+    });
+  }
+
+  protected clearPicks(): void {
+    this.picked.set([]);
+  }
+
+  /** Opens the ticked applicants side by side (a new history entry). */
+  protected openCompare(): void {
+    if (this.picked().length < MIN_COMPARE) return;
+    this.setCompare(this.picked());
+  }
+
+  protected closeCompare(): void {
+    this.setCompare([]);
+  }
+
+  /** Drops one applicant from the open comparison and from the ticks. */
+  protected removeFromCompare(id: number): void {
+    const rest = this.compareIds().filter((other: number) => other !== id);
+    this.picked.set(rest);
+    this.setCompare(rest);
+  }
+
+  private setCompare(ids: readonly number[]): void {
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { [COMPARE_PARAM]: compareParam(ids) },
+      queryParamsHandling: 'merge',
+    });
   }
 
   protected setView(view: ApplicationsView): void {
