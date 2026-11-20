@@ -2,6 +2,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
 import { DB, type Database } from '../database/database.module.js';
 import { resumes } from '../database/schema.js';
+import { ResumeStorage } from './resume-storage.js';
 import { extractResumeText, ResumeTextError } from './resume-text.js';
 
 /** The parts of a stored resume that text extraction needs. */
@@ -19,7 +20,10 @@ export type ResumeFile = {
 export class ResumeTextService {
   private readonly logger = new Logger(ResumeTextService.name);
 
-  constructor(@Inject(DB) private readonly db: Database) {}
+  constructor(
+    @Inject(DB) private readonly db: Database,
+    private readonly storage: ResumeStorage,
+  ) {}
 
   /**
    * Reads the text out of the file and saves it with the resume.
@@ -42,12 +46,18 @@ export class ResumeTextService {
     return text;
   }
 
-  /** Same as extractAndSave, for a resume already in the database. */
+  /** Same as extractAndSave, for a resume already saved. */
   async extractStored(resumeId: number): Promise<string | null> {
-    const [file] = await this.db
-      .select({ id: resumes.id, data: resumes.data })
+    const [row] = await this.db
+      .select({
+        id: resumes.id,
+        storage_file_id: resumes.storage_file_id,
+        data: resumes.data,
+      })
       .from(resumes)
       .where(eq(resumes.id, resumeId));
-    return file ? this.extractAndSave(file) : null;
+    if (!row) return null;
+    const data = await this.storage.read(row);
+    return this.extractAndSave({ id: row.id, data });
   }
 }
