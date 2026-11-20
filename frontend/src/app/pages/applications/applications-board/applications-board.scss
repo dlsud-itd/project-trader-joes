@@ -129,6 +129,13 @@
     gap: 8px;
   }
 
+  &__review {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 12.5px;
+  }
+
   &__date {
     color: var(--tf-muted);
     font-size: 12.5px;

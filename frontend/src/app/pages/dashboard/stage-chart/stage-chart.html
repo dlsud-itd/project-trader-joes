@@ -1,0 +1,40 @@
+@if (total()) {
+  <!-- The whole pipeline in one bar -->
+  <div class="stack" aria-hidden="true">
+    @for (bar of bars(); track bar.stage) {
+      @if (bar.count) {
+        <span
+          class="stack__part"
+          [class]="'stack__part tf-stage--' + bar.stage"
+          [style.flex-grow]="bar.count"
+          [title]="bar.stage + ': ' + bar.count"
+        ></span>
+      }
+    }
+  </div>
+}
+
+<ul class="bars">
+  @for (bar of bars(); track bar.stage) {
+    <li>
+      <a
+        class="bar"
+        [class]="'bar tf-stage--' + bar.stage"
+        [routerLink]="bar.link.path"
+        [queryParams]="bar.link.queryParams"
+        [attr.aria-label]="label(bar)"
+      >
+        <span class="bar__stage">{{ bar.stage }}</span>
+        <span class="bar__track">
+          <span class="bar__fill" [style.width.%]="bar.width"></span>
+        </span>
+        <span class="bar__count">{{ bar.count | number }}</span>
+        <span class="bar__share">{{ bar.share }}%</span>
+      </a>
+    </li>
+  }
+</ul>
+
+@if (!total()) {
+  <p class="none">No one has applied yet.</p>
+}

@@ -76,4 +76,13 @@ describe('ReviewsService', () => {
     del.flush({ message: 'Rating removed.', rating: cleared });
     expect(removed).toEqual(cleared);
   });
+
+  it('deletes a note', () => {
+    let done = false;
+    service.deleteNote(101, 7).subscribe(() => (done = true));
+    const req = http.expectOne(`${API}/notes/7`);
+    expect(req.request.method).toBe('DELETE');
+    req.flush({ message: 'Note deleted.' });
+    expect(done).toBe(true);
+  });
 });

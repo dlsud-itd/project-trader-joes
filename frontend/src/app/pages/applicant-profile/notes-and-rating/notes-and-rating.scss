@@ -127,6 +127,37 @@
     font-weight: 600;
   }
 
+  &__side {
+    display: inline-flex;
+    gap: 10px;
+    align-items: baseline;
+    white-space: nowrap;
+  }
+
+  &__confirm {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin-top: 8px;
+    padding: 8px 10px;
+    border-radius: var(--tf-radius-sm);
+    background: var(--tf-danger-soft);
+    font-size: 13px;
+    color: var(--tf-danger);
+
+    > span:first-child {
+      flex: 1 1 auto;
+      font-weight: 600;
+    }
+  }
+
+  &__actions {
+    display: inline-flex;
+    gap: 8px;
+    margin-left: auto;
+  }
+
   &__body {
     margin: 4px 0 0;
     white-space: pre-line;

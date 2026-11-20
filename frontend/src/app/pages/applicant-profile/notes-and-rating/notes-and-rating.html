@@ -82,18 +82,51 @@
                 <span class="muted">(you)</span>
               }
             </span>
-            @if (isPending(note)) {
-              <span class="muted">Posting…</span>
-            } @else {
-              <time
-                class="muted"
-                [attr.datetime]="note.created_at"
-                [title]="note.created_at | date: 'MMM d, y, h:mm a'"
-                >{{ timeAgo(note) }}</time
-              >
-            }
+            <span class="note__side">
+              @if (isPending(note)) {
+                <span class="muted">Posting…</span>
+              } @else {
+                <time
+                  class="muted"
+                  [attr.datetime]="note.created_at"
+                  [title]="note.created_at | date: 'MMM d, y, h:mm a'"
+                  >{{ timeAgo(note) }}</time
+                >
+              }
+              @if (canDelete(note) && confirmingId() !== note.id) {
+                <button
+                  class="link"
+                  type="button"
+                  [attr.aria-label]="'Delete note by ' + note.author.first_name"
+                  (click)="confirmingId.set(note.id)"
+                >
+                  Delete
+                </button>
+              }
+            </span>
           </div>
           <p class="note__body">{{ note.body }}</p>
+          @if (confirmingId() === note.id) {
+            <div class="note__confirm" role="group" aria-label="Confirm delete">
+              <span>Delete this note for everyone?</span>
+              <span class="note__actions">
+                <button
+                  class="tf-btn tf-btn--danger tf-btn--sm"
+                  type="button"
+                  (click)="deleteNote(note)"
+                >
+                  Delete
+                </button>
+                <button
+                  class="tf-btn tf-btn--ghost tf-btn--sm"
+                  type="button"
+                  (click)="confirmingId.set(null)"
+                >
+                  Cancel
+                </button>
+              </span>
+            </div>
+          }
         </li>
       } @empty {
         <li class="empty muted">

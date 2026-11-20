@@ -1,0 +1,72 @@
+@if (postings().length) {
+  <ul class="postings">
+    @for (p of shown(); track p.id) {
+      <li class="posting">
+        <div class="posting__top">
+          <a
+            class="posting__title"
+            [routerLink]="link(p).path"
+            [queryParams]="link(p).queryParams"
+            >{{ p.title }}</a
+          >
+          <span class="posting__count">
+            <strong>{{ p.candidates | number }}</strong>
+            {{ p.candidates === 1 ? 'candidate' : 'candidates' }}
+          </span>
+        </div>
+        <div class="posting__sub">
+          <span>{{ p.department }}</span>
+          @if (p.status === JobPostingStatus.CLOSED) {
+            <span class="tf-status tf-status--closed">{{
+              statusLabels[p.status]
+            }}</span>
+          }
+          @if (p.candidates) {
+            <span>· {{ p.active }} active</span>
+          }
+        </div>
+        @if (p.candidates) {
+          <div
+            class="mini"
+            role="group"
+            [attr.aria-label]="p.title + ' by stage'"
+          >
+            @for (stage of stages; track stage) {
+              @if (p.stages[stage]) {
+                <a
+                  class="mini__part"
+                  [class]="'mini__part tf-stage--' + stage"
+                  [style.flex-grow]="p.stages[stage]"
+                  [title]="stageTitle(p, stage)"
+                  [attr.aria-label]="stageTitle(p, stage)"
+                  [routerLink]="link(p, stage).path"
+                  [queryParams]="link(p, stage).queryParams"
+                ></a>
+              }
+            }
+          </div>
+        } @else {
+          <div class="mini mini--empty" aria-hidden="true"></div>
+        }
+      </li>
+    }
+  </ul>
+
+  @if (hidden() > 0) {
+    <button class="more" type="button" (click)="showAll.set(true)">
+      Show {{ hidden() }} more
+    </button>
+  } @else if (showAll() && postings().length > limit) {
+    <button class="more" type="button" (click)="showAll.set(false)">
+      Show fewer
+    </button>
+  }
+
+  <ul class="legend" aria-label="Stage colors">
+    @for (stage of stages; track stage) {
+      <li [class]="'tf-stage--' + stage">{{ stage }}</li>
+    }
+  </ul>
+} @else {
+  <p class="none">No job postings yet.</p>
+}

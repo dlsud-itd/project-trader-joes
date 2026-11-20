@@ -45,4 +45,8 @@ export type ApplicationRow = {
   screening: AiScreening | null;
   /** The team's average star rating; `average` is null until someone rates. */
   rating: RatingAverage;
+  /** Your own stars on this applicant; null if you haven't rated. */
+  my_rating: number | null;
+  /** How many shared notes the team has left. */
+  note_count: number;
 };

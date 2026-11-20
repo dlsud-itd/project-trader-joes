@@ -22,6 +22,7 @@ import {
   type RatingAverage,
   ratingAverages,
 } from '../reviews/rating-averages.js';
+import { noteCounts, userRatings } from '../reviews/review-counts.js';
 
 /** One application in GET /api/applications and /api/applications/:id. */
 export type ApplicationListItem = {
@@ -49,6 +50,17 @@ export type ApplicationListItem = {
   screening: AiScreening | null;
   /** The team's average star rating; `average` is null until someone rates. */
   rating: RatingAverage;
+  /** The signed-in user's own stars; null if they haven't rated. */
+  my_rating: number | null;
+  /** How many shared notes the team has left. */
+  note_count: number;
+};
+
+/** What the review lookups found, keyed by application id. */
+type ReviewMaps = {
+  averages: Map<number, RatingAverage>;
+  mine: Map<number, number>;
+  notes: Map<number, number>;
 };
 
 /** What to read for each application, shared by the list and one-item views. */
@@ -89,33 +101,49 @@ export class ApplicationsService {
     private readonly config: ConfigService,
   ) {}
 
-  /** Every application, newest first, for the staff Applications page. */
-  async list(): Promise<ApplicationListItem[]> {
-    const [rows, averages] = await Promise.all([
+  /**
+   * Every application, newest first, for the staff Applications page.
+   * `my_rating` is the signed-in user's own rating.
+   */
+  async list(userId: number): Promise<ApplicationListItem[]> {
+    const [rows, reviews] = await Promise.all([
       this.db.query.applications.findMany({
         ...listQuery,
         orderBy: [desc(applications.submitted_at), desc(applications.id)],
       }),
-      ratingAverages(this.db),
+      this.reviewMaps(userId),
     ]);
     return rows.flatMap((row) => {
-      const item = toListItem(row, averages.get(row.id));
+      const item = toListItem(row, reviews);
       return item ? [item] : [];
     });
   }
 
   /** One application, for the applicant profile page. */
-  async findOne(id: number): Promise<ApplicationListItem> {
-    const [row, averages] = await Promise.all([
+  async findOne(id: number, userId: number): Promise<ApplicationListItem> {
+    const [row, reviews] = await Promise.all([
       this.db.query.applications.findFirst({
         ...listQuery,
         where: eq(applications.id, id),
       }),
-      ratingAverages(this.db, [id]),
+      this.reviewMaps(userId, [id]),
     ]);
-    const item = row && toListItem(row, averages.get(id));
+    const item = row && toListItem(row, reviews);
     if (!item) throw new NotFoundException('Application not found.');
     return item;
+  }
+
+  /** Ratings and note counts, one query each, for all or some applications. */
+  private async reviewMaps(
+    userId: number,
+    ids?: readonly number[],
+  ): Promise<ReviewMaps> {
+    const [averages, mine, notes] = await Promise.all([
+      ratingAverages(this.db, ids),
+      userRatings(this.db, userId, ids),
+      noteCounts(this.db, ids),
+    ]);
+    return { averages, mine, notes };
   }
 
   /** Moves an application to another pipeline stage (API spec IV.B). */
@@ -207,6 +235,8 @@ type ListRow = Omit<
   | 'resume'
   | 'screening'
   | 'rating'
+  | 'my_rating'
+  | 'note_count'
 > & {
   posting: { title: string };
   profile: Pick<
@@ -219,7 +249,7 @@ type ListRow = Omit<
 
 function toListItem(
   { posting, profile, resume, screening, ...row }: ListRow,
-  rating: RatingAverage = NO_RATINGS,
+  { averages, mine, notes }: ReviewMaps,
 ): ApplicationListItem | null {
   // Applying saves the profile in the same transaction, so every row has one.
   if (!profile) return null;
@@ -229,6 +259,8 @@ function toListItem(
     ...profile,
     resume: resume ?? null,
     screening: screening ?? null,
-    rating,
+    rating: averages.get(row.id) ?? NO_RATINGS,
+    my_rating: mine.get(row.id) ?? null,
+    note_count: notes.get(row.id) ?? 0,
   };
 }

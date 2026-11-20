@@ -4,6 +4,7 @@ export enum AppPath {
   DASHBOARD = '/dashboard',
   CAREERS = '/careers',
   APPLICATIONS = '/applications',
+  POSTINGS = '/postings',
 }
 
 /** Query value roleGuard adds when it sends someone to the dashboard. */

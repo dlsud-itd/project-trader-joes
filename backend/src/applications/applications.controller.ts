@@ -9,8 +9,10 @@ import {
   Post,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { CurrentUser } from '../common/decorators/current-user.decorator.js';
 import { Public } from '../common/decorators/public.decorator.js';
 import { Roles } from '../common/decorators/roles.decorator.js';
+import type { AuthUser } from '../common/types/auth-user.js';
 import { ApplicationsService } from './applications.service.js';
 import { CreateApplicationDto } from './dto/create-application.dto.js';
 import { UpdateStageDto } from './dto/update-stage.dto.js';
@@ -33,21 +35,24 @@ export class ApplicationsController {
 
   /**
    * GET /api/applications — every application, newest first, with the
-   * candidate, posting, and AI screening. Staff only.
+   * candidate, posting, AI screening, ratings, and note count. Staff only.
    */
   @ApiBearerAuth()
   @Roles('manager', 'recruiter')
   @Get()
-  list() {
-    return this.applications.list();
+  list(@CurrentUser() user: AuthUser) {
+    return this.applications.list(user.id);
   }
 
   /** GET /api/applications/:id — one application, for the profile page. */
   @ApiBearerAuth()
   @Roles('manager', 'recruiter')
   @Get(':id')
-  findOne(@Param('id', applicationId()) id: number) {
-    return this.applications.findOne(id);
+  findOne(
+    @CurrentUser() user: AuthUser,
+    @Param('id', applicationId()) id: number,
+  ) {
+    return this.applications.findOne(id, user.id);
   }
 
   /**

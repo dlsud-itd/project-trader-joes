@@ -29,6 +29,10 @@ import {
 } from '../../core/applications';
 import { UserRole } from '../../core/auth/auth.models';
 import { AuthService } from '../../core/auth/auth.service';
+import {
+  JobAssignmentWithUser,
+  JobAssignmentsService,
+} from '../../core/job-assignments';
 import { FitScoreBadge } from '../../shared/fit-score-badge';
 import { RatingAverageBadge } from '../../shared/rating-average';
 import { ApplicantDetail } from './applicant-detail';
@@ -36,8 +40,10 @@ import {
   ApplicantQuery,
   clearFilters,
   DEFAULT_QUERY,
+  filterParamsKey,
   matchesQuery,
   postingOptions,
+  queryFromParams,
   SearchToolbar,
   sortApplications,
 } from './applicant-search';
@@ -48,6 +54,18 @@ import { ViewToggle } from './view-toggle';
 
 /** Quick filters: every applicant, a fit tier, or not scored yet. */
 export type FitFilter = 'all' | FitTier | 'unscored';
+
+/** The posting ids a recruiter is assigned to, from every assignment. */
+export function assignedPostingIds(
+  assignments: readonly JobAssignmentWithUser[],
+  userId: number,
+): ReadonlySet<number> {
+  return new Set(
+    assignments
+      .filter((a: JobAssignmentWithUser) => a.user_id === userId)
+      .map((a: JobAssignmentWithUser) => a.job_posting_id),
+  );
+}
 
 /** Shown when a stage change could not be saved; the card moves back. */
 export const moveFailedMessage = ({ row, stage }: StageMove): string =>
@@ -91,6 +109,7 @@ export const NO_RESUME_MESSAGE =
 export class Applications implements OnInit {
   private readonly applicationsApi = inject(ApplicationsService);
   private readonly screeningsApi = inject(AiScreeningsService);
+  private readonly assignmentsApi = inject(JobAssignmentsService);
   private readonly auth = inject(AuthService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -112,6 +131,12 @@ export class Applications implements OnInit {
   protected readonly canMove = computed(() =>
     this.auth.hasRole(UserRole.MANAGER),
   );
+  /** Recruiters can narrow the list to their assigned postings. */
+  protected readonly isRecruiter = computed(() =>
+    this.auth.hasRole(UserRole.RECRUITER),
+  );
+  /** The recruiter's posting ids; null until loaded, and for managers. */
+  protected readonly assigned = signal<ReadonlySet<number> | null>(null);
   /** Applications with a stage change still saving. */
   protected readonly moving = signal<ReadonlySet<number>>(new Set());
 
@@ -132,9 +157,10 @@ export class Applications implements OnInit {
   /** Rows matching the search and filters, before the fit filter. */
   private readonly searched = computed(() => {
     const query = this.search();
+    const assigned = this.assigned();
     const now = new Date();
     return this.rows().filter((r: ApplicationRow) =>
-      matchesQuery(r, query, now),
+      matchesQuery(r, query, now, assigned),
     );
   });
 
@@ -176,8 +202,51 @@ export class Applications implements OnInit {
 
   protected readonly initials = initials;
 
+  /** The filter params last applied, so switching views keeps your edits. */
+  private appliedParamsKey = '';
+
   ngOnInit(): void {
+    this.followFilterLinks();
+    this.loadAssignments();
     this.load();
+  }
+
+  /**
+   * Links like /applications?stage=Interview (from the dashboard) start the
+   * page with those filters. Only a new set of filter params is applied, so
+   * switching between List and Board doesn't undo what the user changed.
+   */
+  private followFilterLinks(): void {
+    this.route.queryParamMap
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((params: ParamMap) => {
+        const key = filterParamsKey(params);
+        if (key === this.appliedParamsKey) return;
+        this.appliedParamsKey = key;
+        const query = queryFromParams(params, this.search());
+        if (!query) return;
+        // Only recruiters have a "My postings" filter.
+        this.search.set({
+          ...query,
+          assignedOnly: query.assignedOnly && this.isRecruiter(),
+        });
+        this.filter.set('all');
+      });
+  }
+
+  /** Recruiters' own postings, for the "My postings" filter. */
+  private loadAssignments(): void {
+    const user = this.auth.user();
+    if (!user || !this.isRecruiter()) return;
+    this.assignmentsApi
+      .list()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (list: JobAssignmentWithUser[]) =>
+          this.assigned.set(assignedPostingIds(list, user.id)),
+        // Without the list, "My postings" just doesn't narrow anything.
+        error: () => this.assigned.set(null),
+      });
   }
 
   load(): void {

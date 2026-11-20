@@ -3,18 +3,20 @@ import {
   HttpTestingController,
   provideHttpClientTesting,
 } from '@angular/common/http/testing';
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Route, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { routes } from '../../app.routes';
 import { environment } from '../../../environments/environment';
 import { ApplicationRow, KanbanStage } from '../../core/applications';
+import { UserRole } from '../../core/auth/auth.models';
 import { AuthService } from '../../core/auth/auth.service';
 import { Applications, moveFailedMessage } from './applications';
 import { TEST_APPLICATIONS } from './test-applications';
 
 const LIST_URL = `${environment.apiUrl}/applications`;
+const ASSIGNMENTS_URL = `${environment.apiUrl}/job-assignments`;
 const stageUrl = (id: number) => `${LIST_URL}/${id}/stage`;
 
 const byName = (name: string): ApplicationRow =>
@@ -54,7 +56,17 @@ describe('Applications board view', () => {
       `.card__move[aria-label="Stage for ${name}"]`,
     ) as HTMLSelectElement;
 
-  async function open(url: string, isManager: boolean = true) {
+  const listNames = (): (string | undefined)[] =>
+    Array.from(el().querySelectorAll('.who__name')).map((n: Element) =>
+      n.textContent?.trim(),
+    );
+
+  async function open(
+    url: string,
+    isManager: boolean = true,
+    assignments: unknown[] = [],
+  ) {
+    const role = isManager ? UserRole.MANAGER : UserRole.RECRUITER;
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(),
@@ -64,13 +76,21 @@ describe('Applications board view', () => {
           { path: 'applications', component: Applications },
           { path: 'applications/:id', component: ProfileStub },
         ]),
-        { provide: AuthService, useValue: { hasRole: () => isManager } },
+        {
+          provide: AuthService,
+          useValue: {
+            hasRole: (...roles: UserRole[]) => roles.includes(role),
+            user: signal({ id: isManager ? 1 : 2, role }),
+          },
+        },
       ],
     });
     http = TestBed.inject(HttpTestingController);
     router = TestBed.inject(Router);
     harness = await RouterTestingHarness.create();
     await harness.navigateByUrl(url);
+    // Recruiters also load their assignments, for the "My postings" filter.
+    if (!isManager) http.expectOne(ASSIGNMENTS_URL).flush(assignments);
     http.expectOne(LIST_URL).flush(structuredClone(TEST_APPLICATIONS));
     await harness.fixture.whenStable();
     harness.detectChanges();
@@ -206,5 +226,79 @@ describe('Applications board view', () => {
     await open('/pipeline');
     expect(router.url).toBe('/applications?view=board');
     expect(el().querySelectorAll('.column').length).toBe(5);
+  });
+
+  describe('filters from a link (dashboard)', () => {
+    it('opens with the stage filter applied', async () => {
+      await open('/applications?view=board&stage=Screening');
+      const shown = cardNames(el()).sort();
+      expect(shown).toEqual([
+        'Kenji Watanabe',
+        'Mei-Lin Chen',
+        'Sofia Alvarez',
+      ]);
+      expect(
+        el().querySelector<HTMLSelectElement>('select[formControlName=stage]')
+          ?.selectedOptions[0].textContent,
+      ).toContain('Screening');
+    });
+
+    it('combines posting and "awaiting my rating"', async () => {
+      await open('/applications?posting=2&review=unrated');
+      expect(listNames()).toEqual(['Sofia Alvarez']);
+    });
+
+    it('narrows to a recruiter’s own postings with mine=1', async () => {
+      await open('/applications?mine=1', false, [
+        { id: 9, job_posting_id: 2, user_id: 2, assigned_at: '2026-11-01' },
+      ]);
+      expect(listNames().sort()).toEqual([
+        'Daniel Okafor',
+        'Kenji Watanabe',
+        'Sofia Alvarez',
+      ]);
+      const toggle = el().querySelector<HTMLInputElement>(
+        'input[formControlName=assignedOnly]',
+      );
+      expect(toggle?.checked).toBe(true);
+    });
+
+    it('has no "My postings" filter for managers', async () => {
+      await open('/applications?mine=1');
+      expect(
+        el().querySelector('input[formControlName=assignedOnly]'),
+      ).toBeNull();
+      expect(listNames()).toHaveLength(TEST_APPLICATIONS.length);
+    });
+
+    it('keeps your own changes when you switch views', async () => {
+      await open('/applications?stage=Screening');
+      Array.from(el().querySelectorAll<HTMLButtonElement>('button'))
+        .find((b: HTMLButtonElement) =>
+          b.textContent?.includes('Clear filters'),
+        )
+        ?.click();
+      harness.detectChanges();
+      viewButton('Board').click();
+      await harness.fixture.whenStable();
+      harness.detectChanges();
+      expect(cardNames(el())).toHaveLength(TEST_APPLICATIONS.length);
+    });
+  });
+
+  it('shows the team rating and note count on each card', async () => {
+    await open('/applications?view=board');
+    const card = Array.from(el().querySelectorAll('.card')).find((c: Element) =>
+      c.textContent?.includes('Mei-Lin Chen'),
+    ) as Element;
+    expect(card.querySelector('app-rating-average')?.textContent).toContain(
+      '4.5',
+    );
+    expect(card.querySelector('app-note-count')?.textContent).toContain('3');
+    const hana = Array.from(el().querySelectorAll('.card')).find((c: Element) =>
+      c.textContent?.includes('Hana Kim'),
+    ) as Element;
+    expect(hana.querySelector('app-rating-average')).toBeNull();
+    expect(hana.querySelector('.notes')).toBeNull();
   });
 });

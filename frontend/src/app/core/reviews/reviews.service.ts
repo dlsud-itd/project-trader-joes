@@ -30,6 +30,15 @@ export class ReviewsService {
       .pipe(map((res: NoteResponse) => res.note));
   }
 
+  /** Deletes a note: your own, or any note if you are a manager. */
+  deleteNote(applicationId: number, noteId: number): Observable<void> {
+    return this.http
+      .delete<{ message: string }>(
+        `${this.api}/${applicationId}/notes/${noteId}`,
+      )
+      .pipe(map(() => undefined));
+  }
+
   /** The average, how many rated, your rating, and whether you can rate. */
   getRating(applicationId: number): Observable<RatingSummary> {
     return this.http.get<RatingSummary>(`${this.api}/${applicationId}/rating`);
