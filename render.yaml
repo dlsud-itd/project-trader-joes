@@ -27,3 +27,12 @@ services:
         sync: false # from https://resend.com/api-keys; empty turns email off
       - key: EMAIL_FROM
         sync: false # optional, e.g. TalentFlow <jobs@yourdomain.com>
+      # Resume files (Appwrite Storage). Leave unset to keep them in Neon.
+      - key: APPWRITE_ENDPOINT
+        sync: false # e.g. https://fra.cloud.appwrite.io/v1
+      - key: APPWRITE_PROJECT_ID
+        sync: false
+      - key: APPWRITE_RESUMES_BUCKET_ID
+        sync: false # the resumes bucket's id
+      - key: APPWRITE_API_KEY
+        sync: false # server key with files.read and files.write

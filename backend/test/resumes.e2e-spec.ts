@@ -1,4 +1,5 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import 'dotenv/config';
 import { eq } from 'drizzle-orm';
@@ -12,10 +13,13 @@ import {
   RESUME_MAX_BYTES,
   RESUME_MIME_TYPE,
 } from '../src/resumes/resume-file.js';
+import { ResumeStorage } from '../src/resumes/resume-storage.js';
 import { buildPdf } from './resume-files.js';
 
 /**
  * Runs against the database in backend/.env (seeded sample accounts required).
+ * Appwrite is switched off here, so files stay in the database; the
+ * Appwrite path is in resume-storage.e2e-spec.ts.
  * The posting and applications created here are deleted afterwards.
  * Run with: npm run test:e2e
  */
@@ -59,7 +63,10 @@ describe('Resumes (e2e)', () => {
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(ResumeStorage)
+      .useValue(new ResumeStorage(new ConfigService({})))
+      .compile();
     app = moduleRef.createNestApplication();
     app.setGlobalPrefix('api');
     app.useGlobalPipes(
@@ -130,6 +137,17 @@ describe('Resumes (e2e)', () => {
     expect(download.headers['content-type']).toBe('application/pdf');
     expect(download.headers['content-disposition']).toContain('Juan%20CV.pdf');
     expect(Buffer.compare(download.body as Buffer, pdf)).toBe(0);
+  });
+
+  it('keeps the file in the database when Appwrite is not set up', async () => {
+    const { id, token } = await apply();
+    const { body } = await upload(id, token, pdf).expect(201);
+    const [row] = await db
+      .select({ data: resumes.data, fileId: resumes.storage_file_id })
+      .from(resumes)
+      .where(eq(resumes.id, body.resume.id));
+    expect(row.fileId).toBeNull();
+    expect(Buffer.compare(row.data as Buffer, pdf)).toBe(0);
   });
 
   it('rejects a Word (.docx) file (400)', async () => {
