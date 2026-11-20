@@ -112,7 +112,38 @@
 
 .list,
 .row {
-  --cols: minmax(0, 1.6fr) minmax(150px, 1fr) 96px 64px;
+  --cols: 18px minmax(0, 1.6fr) minmax(150px, 1fr) 96px 64px;
+}
+
+/* Compare tick box; sits above the row-wide name button */
+.pick {
+  position: relative;
+  z-index: 1;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--tf-accent);
+  cursor: pointer;
+}
+
+.picks {
+  position: sticky;
+  bottom: 16px;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: var(--tf-radius);
+  background: var(--tf-ink);
+  color: #fff;
+  font-size: 13.5px;
+  box-shadow: var(--tf-shadow);
+
+  span {
+    flex: 1;
+  }
 }
 
 .row {
@@ -259,11 +290,15 @@
   }
 
   .row {
-    grid-template-columns: 1fr auto;
+    grid-template-columns: 18px 1fr auto;
     grid-template-areas:
-      'who date'
-      'fit stage';
+      'pick who date'
+      '. fit stage';
     row-gap: 10px;
+  }
+
+  .pick {
+    grid-area: pick;
   }
 
   .who {
