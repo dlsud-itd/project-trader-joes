@@ -17,6 +17,7 @@ import {
 } from '../database/schema.js';
 import type { CreateApplicationDto } from './dto/create-application.dto.js';
 import { signUploadToken } from '../common/upload-token/upload-token.js';
+import { NotificationsService } from '../notifications/notifications.service.js';
 import {
   NO_RATINGS,
   type RatingAverage,
@@ -87,6 +88,7 @@ export class ApplicationsService {
   constructor(
     @Inject(DB) private readonly db: Database,
     private readonly config: ConfigService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   /** Every application, newest first, for the staff Applications page. */
@@ -118,8 +120,17 @@ export class ApplicationsService {
     return item;
   }
 
-  /** Moves an application to another pipeline stage (API spec IV.B). */
+  /**
+   * Moves an application to another pipeline stage (API spec IV.B), and
+   * emails the applicant when it moves to Interview, Offer, or Rejected.
+   */
   async updateStage(id: number, kanban_stage: KanbanStage) {
+    const current = await this.db.query.applications.findFirst({
+      where: eq(applications.id, id),
+      columns: { kanban_stage: true },
+    });
+    if (!current) throw new NotFoundException('Application not found.');
+
     const [updated] = await this.db
       .update(applications)
       .set({ kanban_stage })
@@ -130,6 +141,10 @@ export class ApplicationsService {
         updated_at: applications.updated_at,
       });
     if (!updated) throw new NotFoundException('Application not found.');
+    // Saving the same stage again must not email the applicant twice.
+    if (current.kanban_stage !== kanban_stage) {
+      void this.notifications.stageChanged(id, kanban_stage);
+    }
     return updated;
   }
 
@@ -184,6 +199,7 @@ export class ApplicationsService {
         .values({ application_id: created.id, ...profile });
       return created;
     });
+    void this.notifications.applicationReceived(application.id);
 
     return {
       application,

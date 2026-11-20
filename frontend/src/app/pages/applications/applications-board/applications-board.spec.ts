@@ -5,7 +5,13 @@ import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
 import { ApplicationRow, KanbanStage } from '../../../core/applications';
 import { TEST_APPLICATIONS } from '../test-applications';
-import { ApplicationsBoard, StageMove } from './applications-board';
+import {
+  ApplicationsBoard,
+  emailNotice,
+  NOTICE_MS,
+  NOTIFIED_STAGES,
+  StageMove,
+} from './applications-board';
 
 type StageDrop = CdkDragDrop<KanbanStage, KanbanStage, ApplicationRow>;
 
@@ -157,5 +163,64 @@ describe('ApplicationsBoard', () => {
     expect(
       column(KanbanStage.INTERVIEW).querySelector('.card.is-moving'),
     ).not.toBeNull();
+  });
+
+  describe('email notice', () => {
+    const noticeText = (): string | undefined =>
+      textOf(el().querySelector('.notice'));
+
+    beforeEach(() => vi.useFakeTimers());
+    afterEach(() => vi.useRealTimers());
+
+    it('says the applicant will be emailed, then goes away', () => {
+      render(true);
+      const aisha = byName('Aisha Rahman');
+      drop(aisha, KanbanStage.INTERVIEW, KanbanStage.OFFER);
+      fixture.detectChanges();
+
+      expect(noticeText()).toBe(
+        emailNotice({ row: aisha, stage: KanbanStage.OFFER }),
+      );
+
+      vi.advanceTimersByTime(NOTICE_MS);
+      fixture.detectChanges();
+      expect(noticeText()).toBe('');
+    });
+
+    it('shows for each emailed stage, including from the menu', () => {
+      render(true);
+      for (const stage of NOTIFIED_STAGES) {
+        const select = moveSelect('Jonah Reyes');
+        select.value = stage;
+        select.dispatchEvent(new Event('change'));
+        fixture.detectChanges();
+        expect(noticeText()).toContain(`move to ${stage}`);
+      }
+    });
+
+    it('stays quiet for stages the applicant is not emailed about', () => {
+      render(true);
+      drop(
+        byName('Aisha Rahman'),
+        KanbanStage.INTERVIEW,
+        KanbanStage.SCREENING,
+      );
+      fixture.detectChanges();
+      expect(noticeText()).toBe('');
+    });
+
+    it('replaces the notice and restarts its timer on a newer move', () => {
+      render(true);
+      drop(byName('Aisha Rahman'), KanbanStage.INTERVIEW, KanbanStage.OFFER);
+      vi.advanceTimersByTime(NOTICE_MS - 1_000);
+      const daniel = byName('Daniel Okafor');
+      drop(daniel, KanbanStage.REJECTED, KanbanStage.INTERVIEW);
+      vi.advanceTimersByTime(NOTICE_MS - 1_000);
+      fixture.detectChanges();
+
+      expect(noticeText()).toBe(
+        emailNotice({ row: daniel, stage: KanbanStage.INTERVIEW }),
+      );
+    });
   });
 });
