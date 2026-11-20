@@ -24,6 +24,7 @@
     "db:seed": "tsx src/database/seed.ts",
     "db:backup": "tsx src/database/backup.ts",
     "db:restore": "tsx src/database/restore.ts",
+    "resumes:move-to-storage": "tsx src/database/move-resumes-to-storage.ts",
     "db:studio": "drizzle-kit studio",
     "ai:poc": "tsx scripts/ai-proof-of-concept.ts"
   },

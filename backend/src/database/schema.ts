@@ -161,28 +161,43 @@ const bytea = customType<{ data: Buffer; driverData: Buffer }>({
 });
 
 /**
- * The uploaded resume file. The bytes live in the database because Render's
- * disk is wiped on every deploy. `extracted_text` is read from the file on
- * upload, or before screening if that failed; `parsed_data_json` is unused.
+ * The uploaded resume file. The PDF lives in the Appwrite resumes bucket
+ * (`storage_file_id`), or in `data` for uploads from before Sprint 6 and
+ * setups without Appwrite; Render's disk is wiped on every deploy, so never
+ * on disk. `extracted_text` is read from the file on upload, or before
+ * screening if that failed; `parsed_data_json` is unused.
  */
-export const resumes = pgTable('resumes', {
-  id: serial('id').primaryKey(),
-  application_id: integer('application_id')
-    .notNull()
-    .unique()
-    .references(() => applications.id, { onDelete: 'cascade' }),
-  /** Where staff download the file: /api/resumes/:id/file */
-  file_url: varchar('file_url', { length: 255 }).notNull(),
-  file_name: varchar('file_name', { length: 255 }).notNull(),
-  mime_type: varchar('mime_type', { length: 100 }).notNull(),
-  size_bytes: integer('size_bytes').notNull(),
-  data: bytea('data').notNull(),
-  extracted_text: text('extracted_text'),
-  parsed_data_json: jsonb('parsed_data_json'),
-  uploaded_at: timestamp('uploaded_at', { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-});
+export const resumes = pgTable(
+  'resumes',
+  {
+    id: serial('id').primaryKey(),
+    application_id: integer('application_id')
+      .notNull()
+      .unique()
+      .references(() => applications.id, { onDelete: 'cascade' }),
+    /** Where staff download the file: /api/resumes/:id/file */
+    file_url: varchar('file_url', { length: 255 }).notNull(),
+    file_name: varchar('file_name', { length: 255 }).notNull(),
+    mime_type: varchar('mime_type', { length: 100 }).notNull(),
+    size_bytes: integer('size_bytes').notNull(),
+    /** The file in the Appwrite resumes bucket. */
+    storage_file_id: varchar('storage_file_id', { length: 64 }),
+    /** The file itself, when it isn't in Appwrite. */
+    data: bytea('data'),
+    extracted_text: text('extracted_text'),
+    parsed_data_json: jsonb('parsed_data_json'),
+    uploaded_at: timestamp('uploaded_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    // Every resume has its file somewhere.
+    check(
+      'resumes_file_check',
+      sql`${t.storage_file_id} IS NOT NULL OR ${t.data} IS NOT NULL`,
+    ),
+  ],
+);
 
 export const applicationsRelations = relations(applications, ({ one }) => ({
   posting: one(jobPostings, {

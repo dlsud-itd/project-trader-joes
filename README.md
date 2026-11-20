@@ -104,7 +104,7 @@ Open http://localhost:4200 and sign in with a sample account. API docs are at ht
 The live database is on Neon. To keep a copy of it:
 
 1. Put the live `DATABASE_URL` in `backend/.env` (it's in Render's environment variables).
-2. Run `npm run db:backup --prefix backend`. It saves `backend/backups/talentflow-<date>.json` with every table, including the resume files.
+2. Run `npm run db:backup --prefix backend`. It saves `backend/backups/talentflow-<date>.json` with every table. Resume PDFs kept in Appwrite Storage are not in this file; they stay in the Appwrite bucket.
 3. Keep the file somewhere private, like a team Google Drive folder. **It contains applicants' personal data and password hashes**, so never commit it, post it, or send it in a group chat. `backups/` is in `.gitignore`.
 
 To restore, preferably into a fresh database such as a new Neon branch:
@@ -114,6 +114,15 @@ To restore, preferably into a fresh database such as a new Neon branch:
 3. Run the same command with `--yes` at the end. It deletes everything in that database and puts the backup back in one step, so it either fully works or changes nothing.
 
 Make a backup before risky changes (like a big migration) and at the end of each sprint.
+
+## Resume file storage
+
+Resume PDFs go to an **Appwrite Storage** bucket when the four `APPWRITE_*` variables are set, so they don't use up Neon's free storage. The apply page and the API stay the same; only the server talks to Appwrite.
+
+- **Locally you don't need Appwrite.** Leave the `APPWRITE_*` variables empty and resumes are saved in the database like before. Tests don't need it either.
+- **To turn it on** (Render, or your own `.env`): in the Appwrite console create a bucket (allow PDF, max 5 MB), make an API key with `files.read` and `files.write`, then set `APPWRITE_ENDPOINT`, `APPWRITE_PROJECT_ID`, `APPWRITE_RESUMES_BUCKET_ID`, and `APPWRITE_API_KEY`.
+- **To move resumes uploaded before that** into the bucket: put the live `DATABASE_URL` and the `APPWRITE_*` values in `backend/.env`, make a backup first, then run `npm run resumes:move-to-storage --prefix backend` to see how many, and again with `-- --yes` to move them. It's safe to run more than once.
+- If your `.env` points at a copy of the live database but has no Appwrite keys, resumes already in Appwrite can't be opened (you'll see "Resume storage is not available"). Everything else works.
 
 ## API (Sprint 1)
 

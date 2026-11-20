@@ -23,3 +23,12 @@ services:
         sync: false # e.g. https://talentflow.appwrite.network,http://localhost:4200
       - key: GEMINI_API_KEY
         sync: false # from https://aistudio.google.com/apikey
+      # Resume files (Appwrite Storage). Leave unset to keep them in Neon.
+      - key: APPWRITE_ENDPOINT
+        sync: false # e.g. https://fra.cloud.appwrite.io/v1
+      - key: APPWRITE_PROJECT_ID
+        sync: false
+      - key: APPWRITE_RESUMES_BUCKET_ID
+        sync: false # the resumes bucket's id
+      - key: APPWRITE_API_KEY
+        sync: false # server key with files.read and files.write

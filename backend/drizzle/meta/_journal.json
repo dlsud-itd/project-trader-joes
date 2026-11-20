@@ -57,6 +57,13 @@
       "when": 1794667974359,
       "tag": "0007_notes_and_ratings",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1795182748309,
+      "tag": "0008_resume_storage",
+      "breakpoints": true
     }
   ]
 }
