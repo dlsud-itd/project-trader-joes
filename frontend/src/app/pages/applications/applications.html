@@ -31,106 +31,170 @@
   <p class="tf-alert tf-alert--error" role="alert">{{ message }}</p>
 }
 
-<app-search-toolbar
-  [query]="search()"
-  [postings]="postings()"
-  (queryChange)="search.set($event)"
->
-  <app-view-toggle [view]="view()" (viewChange)="setView($event)" />
-</app-search-toolbar>
-
-<div class="chips" role="group" aria-label="Filter by fit">
-  @for (f of filters(); track f.id) {
-    <button
-      type="button"
-      class="chip"
-      [class]="'chip--' + f.id"
-      [class.is-active]="filter() === f.id"
-      [attr.aria-pressed]="filter() === f.id"
-      (click)="filter.set(f.id)"
-    >
-      {{ f.label }} <span class="chip__count">{{ f.count }}</span>
-    </button>
-  }
-</div>
-
-@if (view() === ApplicationsView.BOARD) {
-  @if (visible().length) {
-    <app-applications-board
-      [rows]="visible()"
-      [canMove]="canMove()"
-      [moving]="moving()"
-      (move)="moveStage($event)"
+@if (isComparing()) {
+  @if (isLoading()) {
+    <div class="empty" role="status">Loading applicants…</div>
+  } @else if (compared().length >= minCompare) {
+    <app-applicant-compare
+      [rows]="compared()"
+      (back)="closeCompare()"
+      (remove)="removeFromCompare($event)"
     />
   } @else {
-    <section class="list" aria-label="Applicants">
-      <ng-container [ngTemplateOutlet]="empty" />
-    </section>
+    <div class="empty">
+      <span>Pick at least two applicants to compare.</span>
+      <button
+        class="tf-btn tf-btn--ghost tf-btn--sm"
+        type="button"
+        (click)="closeCompare()"
+      >
+        Back to list
+      </button>
+    </div>
   }
 } @else {
-  <div class="layout">
-    <section class="list" aria-label="Applicants">
-      <div class="list__head" aria-hidden="true">
-        <span>Applicant</span>
-        <span>AI fit</span>
-        <span>Stage</span>
-        <span>Applied</span>
-      </div>
+  <app-search-toolbar
+    [query]="search()"
+    [postings]="postings()"
+    (queryChange)="search.set($event)"
+  >
+    <app-view-toggle [view]="view()" (viewChange)="setView($event)" />
+  </app-search-toolbar>
 
-      @for (row of visible(); track row.id) {
-        <div class="row" [class.is-selected]="row.id === selectedId()">
-          <span class="who">
-            <span class="avatar" aria-hidden="true">{{
-              initials(row.full_name)
-            }}</span>
-            <span class="who__text">
-              <!-- Covers the whole row, so clicking anywhere selects it -->
-              <button
-                type="button"
-                class="who__name"
-                [attr.aria-current]="row.id === selectedId() ? 'true' : null"
-                (click)="select(row)"
-              >
-                {{ row.full_name }}
-              </button>
-              <span class="who__sub">
-                @if (row.rating.average !== null) {
-                  <app-rating-average [rating]="row.rating" /> ·
-                }
-                {{ row.posting_title }}
+  <div class="chips" role="group" aria-label="Filter by fit">
+    @for (f of filters(); track f.id) {
+      <button
+        type="button"
+        class="chip"
+        [class]="'chip--' + f.id"
+        [class.is-active]="filter() === f.id"
+        [attr.aria-pressed]="filter() === f.id"
+        (click)="filter.set(f.id)"
+      >
+        {{ f.label }} <span class="chip__count">{{ f.count }}</span>
+      </button>
+    }
+  </div>
+
+  @if (picked().length) {
+    <div class="picks" role="region" aria-label="Applicants to compare">
+      <span>
+        <b>{{ picked().length }}</b> selected
+        @if (isPickFull()) {
+          · the most you can compare
+        } @else if (picked().length < minCompare) {
+          · pick one more to compare
+        }
+      </span>
+      <button
+        class="tf-btn tf-btn--primary tf-btn--sm"
+        type="button"
+        [disabled]="picked().length < minCompare"
+        (click)="openCompare()"
+      >
+        Compare {{ picked().length }}
+      </button>
+      <button
+        class="tf-btn tf-btn--ghost tf-btn--sm"
+        type="button"
+        (click)="clearPicks()"
+      >
+        Clear
+      </button>
+    </div>
+  }
+
+  @if (view() === ApplicationsView.BOARD) {
+    @if (visible().length) {
+      <app-applications-board
+        [rows]="visible()"
+        [canMove]="canMove()"
+        [moving]="moving()"
+        (move)="moveStage($event)"
+      />
+    } @else {
+      <section class="list" aria-label="Applicants">
+        <ng-container [ngTemplateOutlet]="empty" />
+      </section>
+    }
+  } @else {
+    <div class="layout">
+      <section class="list" aria-label="Applicants">
+        <div class="list__head" aria-hidden="true">
+          <span></span>
+          <span>Applicant</span>
+          <span>AI fit</span>
+          <span>Stage</span>
+          <span>Applied</span>
+        </div>
+
+        @for (row of visible(); track row.id) {
+          <div class="row" [class.is-selected]="row.id === selectedId()">
+            <input
+              class="pick"
+              type="checkbox"
+              [checked]="isPicked(row.id)"
+              [disabled]="isPickFull() && !isPicked(row.id)"
+              [attr.aria-label]="'Compare ' + row.full_name"
+              (change)="togglePick(row)"
+            />
+            <span class="who">
+              <span class="avatar" aria-hidden="true">{{
+                initials(row.full_name)
+              }}</span>
+              <span class="who__text">
+                <!-- Covers the whole row, so clicking anywhere selects it -->
+                <button
+                  type="button"
+                  class="who__name"
+                  [attr.aria-current]="row.id === selectedId() ? 'true' : null"
+                  (click)="select(row)"
+                >
+                  {{ row.full_name }}
+                </button>
+                <span class="who__sub">
+                  @if (row.rating.average !== null) {
+                    <app-rating-average [rating]="row.rating" /> ·
+                  }
+                  {{ row.posting_title }}
+                </span>
               </span>
             </span>
-          </span>
-          <span class="row__fit">
-            <app-fit-score-badge
-              [score]="row.screening?.fit_score"
-              [status]="row.screening?.status"
-              [busy]="isScoring(row.id)"
-              (retry)="score(row)"
-            />
-          </span>
-          <span class="row__stage">
-            <span class="tf-stage" [class]="'tf-stage--' + row.kanban_stage">{{
-              row.kanban_stage
+            <span class="row__fit">
+              <app-fit-score-badge
+                [score]="row.screening?.fit_score"
+                [status]="row.screening?.status"
+                [busy]="isScoring(row.id)"
+                (retry)="score(row)"
+              />
+            </span>
+            <span class="row__stage">
+              <span
+                class="tf-stage"
+                [class]="'tf-stage--' + row.kanban_stage"
+                >{{ row.kanban_stage }}</span
+              >
+            </span>
+            <span class="row__date">{{
+              row.submitted_at | date: 'MMM d'
             }}</span>
-          </span>
-          <span class="row__date">{{ row.submitted_at | date: 'MMM d' }}</span>
-        </div>
-      } @empty {
-        <ng-container [ngTemplateOutlet]="empty" />
-      }
-    </section>
+          </div>
+        } @empty {
+          <ng-container [ngTemplateOutlet]="empty" />
+        }
+      </section>
 
-    <aside class="detail" #detail aria-label="Selected applicant">
-      @if (selected(); as a) {
-        <app-applicant-detail
-          [application]="a"
-          [busy]="isScoring(a.id)"
-          (score)="score(a)"
-        />
-      }
-    </aside>
-  </div>
+      <aside class="detail" #detail aria-label="Selected applicant">
+        @if (selected(); as a) {
+          <app-applicant-detail
+            [application]="a"
+            [busy]="isScoring(a.id)"
+            (score)="score(a)"
+          />
+        }
+      </aside>
+    </div>
+  }
 }
 
 <!-- Shared by both views: loading, nobody applied, or nothing matches -->
