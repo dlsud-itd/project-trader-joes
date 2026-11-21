@@ -1,4 +1,9 @@
 .head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px 20px;
   margin-bottom: 24px;
 
   h1 {
@@ -9,131 +14,247 @@
     margin: 6px 0 0;
     color: var(--tf-muted);
   }
+
+  &__scope {
+    margin-left: 4px;
+  }
+
+  &__side {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  &__time {
+    color: var(--tf-muted);
+    font-size: 13px;
+  }
+}
+
+.refresh {
+  gap: 6px;
+
+  &.is-spinning svg {
+    animation: spin 0.9s linear infinite;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .notice {
   margin-bottom: 20px;
 }
 
+.loading {
+  margin: 16px 0 0;
+  color: var(--tf-muted);
+}
+
+.muted {
+  color: var(--tf-muted);
+}
+
+/* ------------------------------------------------------------ cards */
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.metric {
+  --c: var(--tf-accent);
+  --c-soft: var(--tf-accent-soft);
+
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas:
+    'icon label'
+    'value value'
+    'hint hint';
+  align-content: start;
+  align-items: center;
+  gap: 4px 10px;
+  padding: 18px 20px;
+  border: 1px solid var(--tf-line);
+  border-radius: var(--tf-radius);
+  background: var(--tf-surface);
+  color: var(--tf-ink);
+  text-decoration: none;
+  box-shadow: var(--tf-shadow);
+  transition:
+    border-color 0.15s,
+    transform 0.15s,
+    box-shadow 0.15s;
+
+  &:hover {
+    border-color: color-mix(in srgb, var(--c) 40%, var(--tf-line));
+    transform: translateY(-2px);
+    box-shadow:
+      var(--tf-shadow),
+      0 8px 24px color-mix(in srgb, var(--c) 12%, transparent);
+
+    .metric__go {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  &--candidates {
+    --c: #0e7490;
+    --c-soft: #e0f4f8;
+  }
+
+  &--new {
+    --c: var(--tf-success);
+    --c-soft: var(--tf-success-soft);
+  }
+
+  &--awaiting {
+    --c: var(--tf-amber);
+    --c-soft: var(--tf-amber-soft);
+  }
+
+  &__icon {
+    grid-area: icon;
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+    background: var(--c-soft);
+    color: var(--c);
+
+    svg {
+      width: 18px;
+      height: 18px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.6;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+  }
+
+  &__label {
+    grid-area: label;
+    color: var(--tf-ink-soft);
+    font-size: 13.5px;
+    font-weight: 600;
+  }
+
+  &__value {
+    grid-area: value;
+    margin-top: 8px;
+    font-family: var(--tf-font-display);
+    font-size: 34px;
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__hint {
+    grid-area: hint;
+    color: var(--tf-muted);
+    font-size: 12.5px;
+  }
+
+  &__go {
+    position: absolute;
+    top: 18px;
+    right: 18px;
+    color: var(--c);
+    font-weight: 700;
+    opacity: 0;
+    transform: translateX(-4px);
+    transition:
+      opacity 0.15s,
+      transform 0.15s;
+  }
+
+  &--skeleton {
+    height: 132px;
+    box-shadow: none;
+    background: linear-gradient(
+      90deg,
+      var(--tf-surface) 25%,
+      var(--tf-bg) 50%,
+      var(--tf-surface) 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.4s ease-in-out infinite;
+  }
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/* ----------------------------------------------------------- panels */
+
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr));
   gap: 20px;
   align-items: start;
 }
 
-.card {
+.panel {
   display: grid;
-  gap: 16px;
+  gap: 18px;
   padding: 22px;
   border: 1px solid var(--tf-line);
   border-radius: var(--tf-radius);
   background: var(--tf-surface);
+  box-shadow: var(--tf-shadow);
+
+  &__head {
+    margin-bottom: 2px;
+
+    h2 {
+      font-size: 17px;
+    }
+
+    p {
+      margin: 4px 0 0;
+      color: var(--tf-muted);
+      font-size: 13.5px;
+    }
+  }
+}
+
+.empty-state {
+  justify-items: start;
+  max-width: 560px;
 
   h2 {
-    font-size: 17px;
+    font-size: 18px;
   }
 
-  .tf-btn {
-    justify-self: start;
-    height: 38px;
-    font-size: 14px;
-  }
-}
-
-.status {
-  display: grid;
-  gap: 10px;
-  margin: 0;
-
-  &__row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 16px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid var(--tf-line);
-  }
-
-  dt {
-    color: var(--tf-muted);
-    font-size: 14px;
-  }
-
-  dd {
-    margin: 0;
-    min-width: 0;
-    text-align: right;
-    overflow-wrap: anywhere;
-  }
-
-  &__error {
-    margin: 0;
-    font-size: 14px;
-    color: var(--tf-danger);
-  }
-}
-
-.mono {
-  font-family: var(--tf-font-mono);
-  font-size: 12.5px;
-}
-
-.pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 3px 10px;
-  border-radius: 999px;
-  font-size: 13px;
-  font-weight: 600;
-
-  &::before {
-    content: '';
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: currentColor;
-  }
-
-  &--ok {
-    background: var(--tf-success-soft);
-    color: var(--tf-success);
-  }
-
-  &--down {
-    background: var(--tf-danger-soft);
-    color: var(--tf-danger);
-  }
-
-  &--neutral {
-    background: var(--tf-bg);
+  p {
+    margin: -8px 0 0;
     color: var(--tf-muted);
   }
 }
 
-.access {
-  display: grid;
-  gap: 10px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-
-  li {
-    position: relative;
-    padding-left: 22px;
-    color: var(--tf-ink-soft);
-
-    &::before {
-      content: '';
-      position: absolute;
-      left: 2px;
-      top: 7px;
-      width: 9px;
-      height: 5px;
-      border-left: 2px solid var(--tf-accent);
-      border-bottom: 2px solid var(--tf-accent);
-      transform: rotate(-45deg);
-    }
+@media (prefers-reduced-motion: reduce) {
+  .metric,
+  .metric__go,
+  .refresh.is-spinning svg,
+  .metric--skeleton {
+    transition: none;
+    animation: none;
   }
 }

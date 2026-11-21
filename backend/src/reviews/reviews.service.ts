@@ -21,6 +21,9 @@ import {
 } from './rating-averages.js';
 
 export const APPLICATION_NOT_FOUND = 'Application not found.';
+export const NOTE_NOT_FOUND = 'Note not found.';
+export const DELETE_NOT_ALLOWED_MESSAGE =
+  'Only the note’s author or a manager can delete it.';
 export const NOT_ALLOWED_MESSAGE =
   'Only managers and recruiters assigned to this posting can add notes ' +
   'and ratings.';
@@ -91,6 +94,32 @@ export class ReviewsService {
       .innerJoin(users, eq(users.id, applicationNotes.author_id))
       .where(eq(applicationNotes.id, created.id));
     return note;
+  }
+
+  /**
+   * Deletes a note. Authors can take back their own notes; managers can
+   * remove any note, e.g. one left on the wrong applicant.
+   */
+  async deleteNote(
+    user: AuthUser,
+    applicationId: number,
+    noteId: number,
+  ): Promise<void> {
+    await this.postingOf(applicationId);
+    const note = await this.db.query.applicationNotes.findFirst({
+      where: and(
+        eq(applicationNotes.id, noteId),
+        eq(applicationNotes.application_id, applicationId),
+      ),
+      columns: { author_id: true },
+    });
+    if (!note) throw new NotFoundException(NOTE_NOT_FOUND);
+    if (user.role !== 'manager' && note.author_id !== user.id) {
+      throw new ForbiddenException(DELETE_NOT_ALLOWED_MESSAGE);
+    }
+    await this.db
+      .delete(applicationNotes)
+      .where(eq(applicationNotes.id, noteId));
   }
 
   /** The average, how many rated, and the signed-in user's own rating. */

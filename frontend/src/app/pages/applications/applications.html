@@ -56,6 +56,7 @@
   <app-search-toolbar
     [query]="search()"
     [postings]="postings()"
+    [canFilterMine]="isRecruiter()"
     (queryChange)="search.set($event)"
   >
     <app-view-toggle [view]="view()" (viewChange)="setView($event)" />

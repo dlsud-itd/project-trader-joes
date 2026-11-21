@@ -77,6 +77,47 @@
   height: 40px;
 }
 
+/* "My postings": a pill that fills in when on. */
+.toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  height: 40px;
+  padding: 0 14px 0 36px;
+  border: 1px solid var(--tf-line);
+  border-radius: 999px;
+  background: var(--tf-surface);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--tf-ink-soft);
+  cursor: pointer;
+  user-select: none;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s;
+
+  input {
+    position: absolute;
+    left: 14px;
+    width: 14px;
+    height: 14px;
+    margin: 0;
+    accent-color: var(--tf-accent);
+    cursor: pointer;
+  }
+
+  &:has(input:checked) {
+    border-color: var(--tf-accent);
+    background: var(--tf-accent-soft);
+    color: var(--tf-accent-strong);
+  }
+
+  &:focus-within {
+    box-shadow: var(--tf-focus);
+  }
+}
+
 @media (max-width: 640px) {
   .select {
     flex: 1 1 100%;

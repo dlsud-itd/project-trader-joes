@@ -204,6 +204,67 @@ describe('Notes and ratings (e2e)', () => {
     });
   });
 
+  describe('deleting notes', () => {
+    const noteIds = async () => {
+      const { body } = await api().get(notesUrl()).set(manager).expect(200);
+      return body as { id: number; body: string }[];
+    };
+    const noteUrl = (noteId: number | string, id = applicationId) =>
+      `${notesUrl(id)}/${noteId}`;
+
+    it("won't let a recruiter delete someone else's note (403)", async () => {
+      const managerNote = (await noteIds()).find(
+        (n) => n.body === 'Strong portfolio.',
+      )!;
+      const { body } = await api()
+        .delete(noteUrl(managerNote.id))
+        .set(recruiter)
+        .expect(403);
+      expect(body.error).toMatch(/author or a manager/);
+    });
+
+    it('lets authors delete their own note', async () => {
+      const own = (await noteIds()).find(
+        (n) => n.body === 'Booked a technical interview.',
+      )!;
+      const { body } = await api()
+        .delete(noteUrl(own.id))
+        .set(recruiter)
+        .expect(200);
+      expect(body.message).toBe('Note deleted.');
+      expect((await noteIds()).map((n) => n.body)).toEqual([
+        'Strong portfolio.',
+      ]);
+    });
+
+    it("lets managers delete anyone's note", async () => {
+      const { body } = await api()
+        .post(notesUrl())
+        .set(recruiter)
+        .send({ body: 'Wrong applicant, sorry.' })
+        .expect(201);
+      await api().delete(noteUrl(body.note.id)).set(manager).expect(200);
+      expect(await noteIds()).toHaveLength(1);
+    });
+
+    it('returns 404 for a note on another application or no note', async () => {
+      const [note] = await noteIds();
+      await api()
+        .delete(noteUrl(note.id, otherApplicationId))
+        .set(manager)
+        .expect(404);
+      for (const id of ['999999999', 'abc']) {
+        const { body } = await api()
+          .delete(noteUrl(id))
+          .set(manager)
+          .expect(404);
+        expect(body.error).toBe('Note not found.');
+      }
+      await api().delete(noteUrl(note.id)).set(applicant).expect(403);
+      await api().delete(noteUrl(note.id)).expect(401);
+    });
+  });
+
   describe('ratings', () => {
     it('starts with no ratings', async () => {
       const { body } = await api().get(ratingUrl()).set(manager).expect(200);
@@ -280,12 +341,23 @@ describe('Notes and ratings (e2e)', () => {
       );
       expect(rated.rating).toEqual({ average: 3, count: 1 });
       expect(unrated.rating).toEqual({ average: null, count: 0 });
+      // Your own stars and the note count come with each row too.
+      expect(rated).toMatchObject({ my_rating: 3, note_count: 1 });
+      expect(unrated).toMatchObject({ my_rating: null, note_count: 0 });
 
       const { body: one } = await api()
         .get(`/api/applications/${applicationId}`)
         .set(manager)
         .expect(200);
       expect(one.rating).toEqual({ average: 3, count: 1 });
+      expect(one).toMatchObject({ my_rating: 3, note_count: 1 });
+
+      // The recruiter took their rating back, so theirs is empty.
+      const { body: theirs } = await api()
+        .get(`/api/applications/${applicationId}`)
+        .set(recruiter)
+        .expect(200);
+      expect(theirs.my_rating).toBeNull();
     });
 
     it('blocks recruiters again once taken off the posting (403)', async () => {

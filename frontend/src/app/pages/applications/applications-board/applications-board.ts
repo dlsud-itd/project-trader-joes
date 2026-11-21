@@ -16,6 +16,8 @@ import {
   KanbanStage,
 } from '../../../core/applications';
 import { FitScoreBadge } from '../../../shared/fit-score-badge';
+import { NoteCount } from '../../../shared/note-count';
+import { RatingAverageBadge } from '../../../shared/rating-average';
 import { initials } from '../initials';
 
 /** Applied date on each card, e.g. "Nov 6". */
@@ -59,6 +61,8 @@ type BoardColumn = {
     CdkDropListGroup,
     DatePipe,
     FitScoreBadge,
+    NoteCount,
+    RatingAverageBadge,
     RouterLink,
   ],
   templateUrl: './applications-board.html',

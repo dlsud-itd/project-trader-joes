@@ -6,11 +6,14 @@ import {
   AppliedWithin,
   clearFilters,
   DEFAULT_QUERY,
+  filterParamsKey,
   matchesQuery,
   matchesText,
   normalize,
   postingOptions,
+  queryFromParams,
   ResumeFilter,
+  ReviewFilter,
   SortOption,
   sortApplications,
 } from './applicant-search';
@@ -209,5 +212,121 @@ describe('query helpers', () => {
       sort: SortOption.NAME_AZ,
       thenBy: null,
     });
+  });
+});
+
+describe('review and "my postings" filters', () => {
+  it('finds applicants awaiting my rating, leaving out rejected ones', () => {
+    // Lucas, Hana, Jonah, Sofia unrated by me; Daniel is unrated but rejected.
+    expect(found({ review: ReviewFilter.UNRATED }).sort()).toEqual([
+      'Hana Kim',
+      'Jonah Reyes',
+      'Lucas Martin',
+      'Sofia Alvarez',
+    ]);
+  });
+
+  it('finds applicants I already rated', () => {
+    expect(found({ review: ReviewFilter.RATED })).toEqual([
+      'Mei-Lin Chen',
+      'Aisha Rahman',
+      'Kenji Watanabe',
+    ]);
+  });
+
+  it('keeps only my assigned postings when "My postings" is on', () => {
+    const qa = new Set([2]);
+    const mine = TEST_APPLICATIONS.filter((r: ApplicationRow) =>
+      matchesQuery(r, { ...DEFAULT_QUERY, assignedOnly: true }, NOW, qa),
+    );
+    expect(names(mine)).toEqual([
+      'Kenji Watanabe',
+      'Sofia Alvarez',
+      'Daniel Okafor',
+    ]);
+  });
+
+  it('ignores "My postings" until the assignments are known', () => {
+    expect(found({ assignedOnly: true })).toHaveLength(
+      TEST_APPLICATIONS.length,
+    );
+  });
+
+  it('counts both as filters in use', () => {
+    expect(
+      activeFilterCount({
+        ...DEFAULT_QUERY,
+        review: ReviewFilter.UNRATED,
+        assignedOnly: true,
+      }),
+    ).toBe(2);
+  });
+});
+
+describe('queryFromParams', () => {
+  const params = (values: Record<string, string>) => ({
+    get: (name: string) => values[name] ?? null,
+  });
+
+  it('returns null when the link sets no filters', () => {
+    expect(queryFromParams(params({ view: 'board' }))).toBeNull();
+  });
+
+  it('reads every filter a dashboard link can set', () => {
+    expect(
+      queryFromParams(
+        params({
+          posting: '2',
+          stage: 'Interview',
+          applied: '7',
+          review: 'unrated',
+          mine: '1',
+        }),
+      ),
+    ).toEqual({
+      ...DEFAULT_QUERY,
+      postingId: 2,
+      stage: KanbanStage.INTERVIEW,
+      applied: AppliedWithin.WEEK,
+      review: ReviewFilter.UNRATED,
+      assignedOnly: true,
+    });
+  });
+
+  it('replaces earlier filters and search text but keeps the sort', () => {
+    const base: ApplicantQuery = {
+      ...DEFAULT_QUERY,
+      text: 'mei',
+      resume: ResumeFilter.WITH,
+      sort: SortOption.NAME_AZ,
+    };
+    expect(queryFromParams(params({ stage: 'Offer' }), base)).toEqual({
+      ...DEFAULT_QUERY,
+      stage: KanbanStage.OFFER,
+      sort: SortOption.NAME_AZ,
+    });
+  });
+
+  it('ignores values it does not recognise', () => {
+    expect(
+      queryFromParams(
+        params({
+          posting: 'abc',
+          stage: 'Hired',
+          applied: '365',
+          review: 'maybe',
+          mine: 'yes',
+        }),
+      ),
+    ).toEqual(DEFAULT_QUERY);
+    expect(queryFromParams(params({ posting: '-3' }))?.postingId).toBeNull();
+  });
+
+  it('builds a key that only changes with the filter params', () => {
+    const a = filterParamsKey(params({ stage: 'Offer', view: 'board' }));
+    const b = filterParamsKey(params({ stage: 'Offer' }));
+    const c = filterParamsKey(params({ stage: 'Applied' }));
+    expect(a).toBe(b);
+    expect(a).not.toBe(c);
   });
 });

@@ -3,11 +3,12 @@ import {
   HttpTestingController,
   provideHttpClientTesting,
 } from '@angular/common/http/testing';
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { environment } from '../../../environments/environment';
+import { UserRole } from '../../core/auth/auth.models';
 import { AuthService } from '../../core/auth/auth.service';
 import { Applications } from './applications';
 import { TEST_APPLICATIONS } from './test-applications';
@@ -46,7 +47,14 @@ describe('Applications compare view', () => {
           { path: 'applications', component: Applications },
           { path: 'applications/:id', component: ProfileStub },
         ]),
-        { provide: AuthService, useValue: { hasRole: () => true } },
+        {
+          // Signed in as a manager, who sees every applicant.
+          provide: AuthService,
+          useValue: {
+            hasRole: (...roles: UserRole[]) => roles.includes(UserRole.MANAGER),
+            user: signal({ id: 1, role: UserRole.MANAGER }),
+          },
+        },
       ],
     });
     http = TestBed.inject(HttpTestingController);

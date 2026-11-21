@@ -36,6 +36,15 @@
               </span>
             </div>
 
+            @if (row.rating.average !== null || row.note_count) {
+              <div class="card__review">
+                @if (row.rating.average !== null) {
+                  <app-rating-average [rating]="row.rating" />
+                }
+                <app-note-count [count]="row.note_count" />
+              </div>
+            }
+
             <div class="card__foot">
               <app-fit-score-badge
                 variant="pill"

@@ -115,6 +115,12 @@ export class ApplicantProfile {
     const row = this.application();
     if (row) this.application.set({ ...row, rating });
   }
+
+  protected updateNoteCount(note_count: number): void {
+    const row = this.application();
+    if (row) this.application.set({ ...row, note_count });
+  }
+
   /** Score resume / Re-score / Retry. Each call uses Gemini quota. */
   protected score(): void {
     const row = this.application();

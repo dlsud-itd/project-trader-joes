@@ -4,6 +4,7 @@ import {
   ScreeningStatus,
 } from '../../../core/ai-screenings';
 import {
+  ApplicantParam,
   ApplicationRow,
   KANBAN_STAGES,
   KanbanStage,
@@ -69,6 +70,22 @@ export const RESUME_LABEL: Record<ResumeFilter, string> = {
   [ResumeFilter.WITHOUT]: 'Missing',
 };
 
+/**
+ * Whether the signed-in user has rated the applicant yet. "Awaiting" leaves
+ * out rejected applicants, matching the dashboard's count.
+ */
+export enum ReviewFilter {
+  ANY = 'any',
+  UNRATED = 'unrated',
+  RATED = 'rated',
+}
+
+export const REVIEW_LABEL: Record<ReviewFilter, string> = {
+  [ReviewFilter.ANY]: 'Any',
+  [ReviewFilter.UNRATED]: 'Awaiting my rating',
+  [ReviewFilter.RATED]: 'Rated by me',
+};
+
 /** Everything the search toolbar sets. `null` means "all". */
 export type ApplicantQuery = {
   text: string;
@@ -76,6 +93,9 @@ export type ApplicantQuery = {
   stage: KanbanStage | null;
   applied: AppliedWithin;
   resume: ResumeFilter;
+  review: ReviewFilter;
+  /** Only postings the signed-in recruiter is assigned to. */
+  assignedOnly: boolean;
   sort: SortOption;
   thenBy: SortOption | null;
 };
@@ -86,6 +106,8 @@ export const DEFAULT_QUERY: ApplicantQuery = {
   stage: null,
   applied: AppliedWithin.ANY,
   resume: ResumeFilter.ANY,
+  review: ReviewFilter.ANY,
+  assignedOnly: false,
   sort: SortOption.FIT_HIGH,
   thenBy: SortOption.NEWEST,
 };
@@ -106,6 +128,8 @@ export function activeFilterCount(query: ApplicantQuery): number {
     query.stage !== null,
     query.applied !== AppliedWithin.ANY,
     query.resume !== ResumeFilter.ANY,
+    query.review !== ReviewFilter.ANY,
+    query.assignedOnly,
   ].filter(Boolean).length;
 }
 
@@ -165,13 +189,30 @@ export function matchesText(row: ApplicationRow, text: string): boolean {
   return words.every((word: string) => haystack.includes(word));
 }
 
-/** The posting, stage, applied date, and resume filters. */
+/**
+ * The posting, stage, applied date, resume, and review filters.
+ * `assigned` is the signed-in recruiter's posting ids, for "My postings";
+ * leave it out (or null) when it isn't known.
+ */
 export function matchesFilters(
   row: ApplicationRow,
   query: ApplicantQuery,
   now: Date,
+  assigned: ReadonlySet<number> | null = null,
 ): boolean {
   if (query.postingId !== null && row.job_posting_id !== query.postingId) {
+    return false;
+  }
+  if (query.assignedOnly && assigned && !assigned.has(row.job_posting_id)) {
+    return false;
+  }
+  if (
+    query.review === ReviewFilter.UNRATED &&
+    (row.my_rating !== null || row.kanban_stage === KanbanStage.REJECTED)
+  ) {
+    return false;
+  }
+  if (query.review === ReviewFilter.RATED && row.my_rating === null) {
     return false;
   }
   if (query.stage !== null && row.kanban_stage !== query.stage) return false;
@@ -189,8 +230,59 @@ export function matchesQuery(
   row: ApplicationRow,
   query: ApplicantQuery,
   now: Date,
+  assigned: ReadonlySet<number> | null = null,
 ): boolean {
-  return matchesFilters(row, query, now) && matchesText(row, query.text);
+  return (
+    matchesFilters(row, query, now, assigned) && matchesText(row, query.text)
+  );
+}
+
+/** Something with `get`, like Angular's ParamMap. */
+type Params = { get(name: string): string | null };
+
+const enumValue = <T extends string>(
+  values: readonly T[],
+  value: string | null,
+): T | null => values.find((v: T) => v === value) ?? null;
+
+/**
+ * The filters a link asked for (see ApplicantParam), on top of `base`.
+ * Unknown or broken values are ignored. Returns null when the link sets no
+ * filters, so the page keeps whatever the user picked.
+ */
+export function queryFromParams(
+  params: Params,
+  base: ApplicantQuery = DEFAULT_QUERY,
+): ApplicantQuery | null {
+  const raw = Object.values(ApplicantParam).map((p: ApplicantParam) =>
+    params.get(p),
+  );
+  if (raw.every((v: string | null) => v === null)) return null;
+
+  const posting = Number(params.get(ApplicantParam.POSTING));
+  const applied = enumValue(
+    Object.values(AppliedWithin).filter((a) => a !== AppliedWithin.ANY),
+    params.get(ApplicantParam.APPLIED),
+  );
+  const review = enumValue(
+    [ReviewFilter.UNRATED, ReviewFilter.RATED],
+    params.get(ApplicantParam.REVIEW),
+  );
+  return {
+    ...clearFilters(base),
+    postingId: Number.isInteger(posting) && posting > 0 ? posting : null,
+    stage: enumValue(KANBAN_STAGES, params.get(ApplicantParam.STAGE)),
+    applied: applied ?? AppliedWithin.ANY,
+    review: review ?? ReviewFilter.ANY,
+    assignedOnly: params.get(ApplicantParam.MINE) === '1',
+  };
+}
+
+/** A stable key for the filter params, to tell when a new link arrives. */
+export function filterParamsKey(params: Params): string {
+  return Object.values(ApplicantParam)
+    .map((p: ApplicantParam) => `${p}=${params.get(p) ?? ''}`)
+    .join('&');
 }
 
 type Compare = (a: ApplicationRow, b: ApplicationRow) => number;

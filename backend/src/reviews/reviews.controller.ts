@@ -15,12 +15,22 @@ import { Roles } from '../common/decorators/roles.decorator.js';
 import type { AuthUser } from '../common/types/auth-user.js';
 import { CreateNoteDto } from './dto/create-note.dto.js';
 import { SetRatingDto } from './dto/set-rating.dto.js';
-import { APPLICATION_NOT_FOUND, ReviewsService } from './reviews.service.js';
+import {
+  APPLICATION_NOT_FOUND,
+  NOTE_NOT_FOUND,
+  ReviewsService,
+} from './reviews.service.js';
 
 /** A non-numeric id can't match an application, so treat it as not found. */
 const applicationId = () =>
   new ParseIntPipe({
     exceptionFactory: () => new NotFoundException(APPLICATION_NOT_FOUND),
+  });
+
+/** A non-numeric note id can't match a note. */
+const noteId = () =>
+  new ParseIntPipe({
+    exceptionFactory: () => new NotFoundException(NOTE_NOT_FOUND),
   });
 
 /**
@@ -50,6 +60,20 @@ export class ReviewsController {
   ) {
     const note = await this.reviews.addNote(user, id, body);
     return { message: 'Note added.', note };
+  }
+
+  /**
+   * DELETE /api/applications/:id/notes/:noteId — your own note, or any
+   * note if you are a manager.
+   */
+  @Delete('notes/:noteId')
+  async deleteNote(
+    @CurrentUser() user: AuthUser,
+    @Param('id', applicationId()) id: number,
+    @Param('noteId', noteId()) note: number,
+  ) {
+    await this.reviews.deleteNote(user, id, note);
+    return { message: 'Note deleted.' };
   }
 
   /** GET /api/applications/:id/rating — average, count, and your rating. */

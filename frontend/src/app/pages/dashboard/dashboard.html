@@ -4,8 +4,37 @@
     <p>
       You’re signed in as a <strong>{{ roleLabel() }}</strong
       >.
+      @if (scopeText(); as text) {
+        <span class="head__scope">{{ text }}</span>
+      }
     </p>
   </div>
+  @if (summary(); as s) {
+    <div class="head__side">
+      <span class="head__time"
+        >Updated {{ s.generated_at | date: 'h:mm a' }}</span
+      >
+      <button
+        class="tf-btn tf-btn--ghost tf-btn--sm refresh"
+        type="button"
+        [disabled]="isLoading()"
+        [class.is-spinning]="isLoading()"
+        (click)="load()"
+      >
+        <svg viewBox="0 0 20 20" width="15" height="15" aria-hidden="true">
+          <path
+            d="M16 10a6 6 0 1 1-1.76-4.24M16 4v3.5h-3.5"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+        Refresh
+      </button>
+    </div>
+  }
 </header>
 
 @if (denied()) {
@@ -14,58 +43,113 @@
   </div>
 }
 
-<div class="grid">
-  <section class="card">
-    <h2>System status</h2>
-    <dl class="status">
-      <div class="status__row">
-        <dt>API and database</dt>
-        <dd>
-          @switch (api().kind) {
-            @case (ApiStatus.CHECKING) {
-              <span class="pill pill--neutral">Checking…</span>
-            }
-            @case (ApiStatus.UP) {
-              <span class="pill pill--ok">Online</span>
-            }
-            @case (ApiStatus.DOWN) {
-              <span class="pill pill--down">Offline</span>
-            }
-          }
-        </dd>
-      </div>
-      <div class="status__row">
-        <dt>Endpoint</dt>
-        <dd class="mono">{{ apiUrl }}</dd>
-      </div>
-      @if (api(); as state) {
-        @if (state.kind === ApiStatus.UP) {
-          <div class="status__row">
-            <dt>Last checked</dt>
-            <dd>{{ state.checkedAt | date: 'mediumTime' }}</dd>
-          </div>
-        }
-        @if (state.kind === ApiStatus.DOWN) {
-          <p class="status__error">{{ state.message }}</p>
-        }
-      }
-    </dl>
+@if (loadError(); as message) {
+  <div class="tf-alert tf-alert--error notice" role="alert">
+    <span>{{ message }}</span>
     <button
-      class="tf-btn tf-btn--ghost"
+      class="tf-btn tf-btn--ghost tf-btn--sm"
       type="button"
-      (click)="checkApi()"
-      [disabled]="api().kind === ApiStatus.CHECKING"
+      (click)="load()"
     >
-      Check again
+      Try again
     </button>
-  </section>
+  </div>
+}
 
-  <section class="card">
-    <h2>Your access</h2>
-    <ul class="access">
-      @for (item of access(); track item) {
-        <li>{{ item }}</li>
+@if (isLoading() && !summary()) {
+  <div class="cards" aria-hidden="true">
+    @for (i of [1, 2, 3, 4]; track i) {
+      <div class="metric metric--skeleton"></div>
+    }
+  </div>
+  <p class="loading" role="status">
+    Loading your numbers…
+    @if (isSlow()) {
+      The server may be waking up, which can take up to a minute.
+    }
+  </p>
+} @else if (summary(); as s) {
+  @if (hasNoPostings()) {
+    <section class="panel empty-state">
+      <h2>No postings assigned yet</h2>
+      <p>
+        Your numbers show up here once a recruitment manager assigns you to a
+        job posting.
+      </p>
+      <a class="tf-btn tf-btn--ghost tf-btn--sm" routerLink="/postings"
+        >View job postings</a
+      >
+    </section>
+  } @else {
+    <section class="cards" aria-label="Summary">
+      @for (card of cards(); track card.id) {
+        <a
+          class="metric"
+          [class]="'metric metric--' + card.id"
+          [routerLink]="card.link.path"
+          [queryParams]="card.link.queryParams"
+        >
+          <span class="metric__icon" aria-hidden="true">
+            @switch (card.id) {
+              @case ('postings') {
+                <svg viewBox="0 0 20 20">
+                  <rect x="3" y="5.5" width="14" height="11" rx="2" />
+                  <path
+                    d="M7.5 5.5V4.25c0-.7.55-1.25 1.25-1.25h2.5c.7 0 1.25.55 1.25 1.25V5.5M3 10h14"
+                  />
+                </svg>
+              }
+              @case ('candidates') {
+                <svg viewBox="0 0 20 20">
+                  <circle cx="8" cy="7" r="3" />
+                  <path
+                    d="M2.75 16.5c.5-2.75 2.6-4.5 5.25-4.5s4.75 1.75 5.25 4.5M13.5 4.25a3 3 0 0 1 0 5.5M15.25 12.25c1.1.6 1.85 2 2 4.25"
+                  />
+                </svg>
+              }
+              @case ('new') {
+                <svg viewBox="0 0 20 20">
+                  <rect x="3" y="4" width="14" height="13" rx="2" />
+                  <path d="M3 8h14M7 2.5V5.5M13 2.5V5.5M10 10.5v4M8 12.5h4" />
+                </svg>
+              }
+              @case ('awaiting') {
+                <svg viewBox="0 0 20 20">
+                  <path
+                    d="M10 2.75l2.2 4.5 4.95.7-3.6 3.5.85 4.9L10 14l-4.4 2.35.85-4.9-3.6-3.5 4.95-.7z"
+                  />
+                </svg>
+              }
+            }
+          </span>
+          <span class="metric__label">{{ card.label }}</span>
+          <span class="metric__value">{{ card.value | number }}</span>
+          <span class="metric__hint">{{ card.hint }}</span>
+          <span class="metric__go" aria-hidden="true">→</span>
+        </a>
       }
-    </ul>
-  </section>
-</div>
+    </section>
+
+    <div class="grid">
+      <section class="panel" aria-labelledby="stages-title">
+        <header class="panel__head">
+          <h2 id="stages-title">Pipeline by stage</h2>
+          <p>
+            {{ s.candidates.total | number }}
+            {{ s.candidates.total === 1 ? 'candidate' : 'candidates' }}. Pick a
+            stage to see who’s in it.
+          </p>
+        </header>
+        <app-stage-chart [bars]="bars()" [total]="s.candidates.total" />
+      </section>
+
+      <section class="panel" aria-labelledby="postings-title">
+        <header class="panel__head">
+          <h2 id="postings-title">By posting</h2>
+          <p>Open postings first, busiest at the top.</p>
+        </header>
+        <app-posting-breakdown [postings]="s.by_posting" />
+      </section>
+    </div>
+  }
+}
