@@ -105,6 +105,30 @@ describe('Apply page', () => {
   };
   const valueOf = (id: string): string =>
     fixture.debugElement.query(By.css(`#${id}`)).nativeElement.value;
+  /** The link on the thank-you screen with this text, if shown. */
+  const doneLink = (label: string): HTMLAnchorElement | undefined =>
+    fixture.debugElement
+      .queryAll(By.css('.done a'))
+      .map((el) => el.nativeElement as HTMLAnchorElement)
+      .find((link) => link.textContent?.trim() === label);
+  /** Answers the application and resume requests with success. */
+  const finishSending = async () => {
+    http.expectOne(`${API}/applications`).flush({
+      message: 'Application submitted successfully.',
+      application: {
+        id: 101,
+        job_posting_id: 7,
+        kanban_stage: 'Applied',
+        submitted_at: '',
+      },
+      upload_token: TOKEN,
+    });
+    await settle();
+    http
+      .expectOne(`${API}/resumes`)
+      .flush({ message: 'Resume uploaded successfully.', resume: {} });
+    await settle();
+  };
 
   it('fills in the name and email of a signed-in applicant', async () => {
     await signInAs(UserRole.APPLICANT);
@@ -182,6 +206,24 @@ describe('Apply page', () => {
 
     expect(text()).toContain('Application sent');
     expect(text()).toContain('juan@example.com');
+    // Signed out: no account to track it with yet.
+    const register = doneLink('Create an account with this email to track it');
+    expect(register?.getAttribute('href')).toBe('/careers/register');
+    expect(doneLink('Track this application')).toBeUndefined();
+  });
+
+  it('lets a signed-in applicant track the application', async () => {
+    await signInAs(UserRole.APPLICANT);
+    chooseResume();
+    fixture.detectChanges();
+    await submit();
+    await finishSending();
+
+    const track = doneLink('Track this application');
+    expect(track?.getAttribute('href')).toBe('/careers/applications');
+    expect(
+      doneLink('Create an account with this email to track it'),
+    ).toBeUndefined();
   });
 
   it('shows the API error when the application is refused', async () => {

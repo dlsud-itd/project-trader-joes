@@ -1,5 +1,6 @@
 import { Component, computed, inject, OnInit } from '@angular/core';
 import { RouterLink, RouterOutlet } from '@angular/router';
+import { AppPath } from '../core/app-paths';
 import { UserRole } from '../core/auth/auth.models';
 import { AuthService } from '../core/auth/auth.service';
 
@@ -16,6 +17,7 @@ import { AuthService } from '../core/auth/auth.service';
 export class PublicShell implements OnInit {
   protected readonly auth = inject(AuthService);
   protected readonly UserRole = UserRole;
+  protected readonly myApplicationsPath = AppPath.MY_APPLICATIONS;
   protected readonly year = new Date().getFullYear();
 
   protected readonly initials = computed(() => {

@@ -16,6 +16,7 @@ import { Title } from '@angular/platform-browser';
 import { RouterLink } from '@angular/router';
 import { finalize, Observable, switchMap, tap } from 'rxjs';
 import { apiErrorMessage } from '../../core/api/api-error';
+import { AppPath } from '../../core/app-paths';
 import { User, UserRole } from '../../core/auth/auth.models';
 import { AuthService } from '../../core/auth/auth.service';
 import {
@@ -64,6 +65,7 @@ export class Apply implements OnInit {
 
   protected readonly limit = ApplicationLimit;
   protected readonly applyStep = ApplyStep;
+  protected readonly appPath = AppPath;
 
   protected readonly isLoading = signal(true);
   protected readonly loadError = signal<string | null>(null);
@@ -78,6 +80,10 @@ export class Apply implements OnInit {
       this.step() === ApplyStep.SENDING || this.step() === ApplyStep.UPLOADING,
   );
   protected readonly sentTo = signal('');
+  /** Applicants can follow the application on My Applications. */
+  protected readonly isApplicant = computed(
+    () => this.auth.user()?.role === UserRole.APPLICANT,
+  );
 
   /** Kept after the application is saved, so a failed upload can be retried. */
   private saved: SavedApplication | null = null;

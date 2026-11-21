@@ -3,6 +3,9 @@ export enum AppPath {
   LOGIN = '/login',
   DASHBOARD = '/dashboard',
   CAREERS = '/careers',
+  APPLICANT_LOGIN = '/careers/login',
+  APPLICANT_REGISTER = '/careers/register',
+  MY_APPLICATIONS = '/careers/applications',
   APPLICATIONS = '/applications',
   POSTINGS = '/postings',
 }

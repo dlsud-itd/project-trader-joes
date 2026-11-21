@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { AppPath } from './core/app-paths';
 import {
+  applicantGuard,
   authGuard,
   guestGuard,
   roleGuard,
@@ -50,6 +51,16 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./pages/applicant-register/applicant-register').then(
             (m) => m.ApplicantRegister,
+          ),
+      },
+      {
+        // The applicant's own applications. Also listed before ':id'.
+        path: 'applications',
+        canActivate: [applicantGuard],
+        title: 'My applications · TalentFlow',
+        loadComponent: () =>
+          import('./pages/my-applications/my-applications').then(
+            (m) => m.MyApplications,
           ),
       },
       {

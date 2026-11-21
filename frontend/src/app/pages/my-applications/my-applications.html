@@ -1,0 +1,57 @@
+<header class="head">
+  <h1>My applications</h1>
+  @if (auth.user(); as user) {
+    <p>
+      Showing applications sent with <strong>{{ user.email }}</strong
+      >. Applications sent with a different email won’t appear here.
+    </p>
+  }
+</header>
+
+@if (isLoading()) {
+  <div class="list" aria-busy="true" aria-label="Loading your applications">
+    @for (n of [1, 2]; track n) {
+      <div class="card skeleton"></div>
+    }
+  </div>
+} @else if (loadError(); as message) {
+  <div class="tf-alert tf-alert--error" role="alert">
+    <span>{{ message }}</span>
+    <button
+      class="tf-btn tf-btn--ghost tf-btn--sm"
+      type="button"
+      (click)="load()"
+    >
+      Try again
+    </button>
+  </div>
+} @else {
+  <ul class="list">
+    @for (application of applications(); track application.id) {
+      <li class="card">
+        <div class="card__main">
+          <h2>
+            <a [routerLink]="[careersPath, application.job_posting_id]">{{
+              application.posting_title
+            }}</a>
+          </h2>
+          <p class="card__meta">
+            Applied {{ timeAgo(application.submitted_at) }}
+          </p>
+        </div>
+        <span class="status" [ngClass]="statusBadges[application.status]">
+          <span class="visually-hidden">Status:</span>
+          {{ application.status }}
+        </span>
+      </li>
+    } @empty {
+      <li class="empty">
+        <h2>You haven’t applied yet</h2>
+        <p>When you apply for a role, you can follow its progress here.</p>
+        <a class="tf-btn tf-btn--primary" [routerLink]="careersPath"
+          >See open roles</a
+        >
+      </li>
+    }
+  </ul>
+}

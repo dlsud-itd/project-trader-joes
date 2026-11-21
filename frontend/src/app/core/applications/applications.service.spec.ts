@@ -6,8 +6,10 @@ import {
 import { TestBed } from '@angular/core/testing';
 import { environment } from '../../../environments/environment';
 import {
+  ApplicantStatus,
   ApplicationRow,
   KanbanStage,
+  MyApplication,
   StageUpdate,
 } from './applications.models';
 import { ApplicationsService } from './applications.service';
@@ -55,6 +57,24 @@ describe('ApplicationsService', () => {
     req.flush([row]);
 
     expect(result).toEqual([row]);
+  });
+
+  it("loads the signed-in applicant's own applications", () => {
+    const mine: MyApplication = {
+      id: 101,
+      job_posting_id: 1,
+      posting_title: 'Frontend Developer Intern',
+      submitted_at: '2026-10-21T02:10:00Z',
+      status: ApplicantStatus.UNDER_REVIEW,
+    };
+    let result: MyApplication[] = [];
+    service.getMine().subscribe((list: MyApplication[]) => (result = list));
+
+    const req = http.expectOne(`${APPLICATIONS_URL}/mine`);
+    expect(req.request.method).toBe('GET');
+    req.flush([mine]);
+
+    expect(result).toEqual([mine]);
   });
 
   it('loads one application by id', () => {

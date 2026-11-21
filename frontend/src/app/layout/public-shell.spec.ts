@@ -1,6 +1,10 @@
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
+import { of } from 'rxjs';
+import { User, UserRole } from '../core/auth/auth.models';
+import { AuthService } from '../core/auth/auth.service';
 import { PublicShell } from './public-shell';
 
 describe('PublicShell', () => {
@@ -38,5 +42,41 @@ describe('PublicShell', () => {
     expect(
       render().debugElement.query(By.css('main router-outlet')),
     ).not.toBeNull();
+  });
+
+  it('links a signed-in applicant to My Applications', () => {
+    const user: User = {
+      id: 3,
+      email: 'paula@example.com',
+      first_name: 'Paula',
+      last_name: 'Ng',
+      role: UserRole.APPLICANT,
+      created_at: '2026-11-01T00:00:00Z',
+    };
+    TestBed.configureTestingModule({
+      imports: [PublicShell],
+      providers: [
+        provideRouter([]),
+        {
+          provide: AuthService,
+          useValue: {
+            user: signal(user),
+            isAuthenticated: signal(true),
+            hasRole: (...roles: UserRole[]): boolean =>
+              roles.includes(user.role),
+            restoreSession: () => of(true),
+            logout: (): void => undefined,
+          },
+        },
+      ],
+    });
+    const fixture = TestBed.createComponent(PublicShell);
+    fixture.detectChanges();
+
+    const link = fixture.debugElement
+      .queryAll(By.css('a'))
+      .map((el) => el.nativeElement as HTMLAnchorElement)
+      .find((a) => a.textContent?.trim() === 'My Applications');
+    expect(link?.getAttribute('href')).toBe('/careers/applications');
   });
 });

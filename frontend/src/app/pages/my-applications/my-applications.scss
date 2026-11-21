@@ -1,0 +1,157 @@
+.head {
+  margin-bottom: 24px;
+
+  h1 {
+    font-size: clamp(26px, 4vw, 32px);
+    letter-spacing: -0.01em;
+  }
+
+  p {
+    margin: 8px 0 0;
+    max-width: 60ch;
+    color: var(--tf-muted);
+  }
+}
+
+.list {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 22px;
+  border: 1px solid var(--tf-line);
+  border-radius: var(--tf-radius);
+  background: var(--tf-surface);
+
+  &.skeleton {
+    height: 84px;
+    background: linear-gradient(
+        90deg,
+        var(--tf-surface),
+        var(--tf-bg),
+        var(--tf-surface)
+      )
+      0 0 / 200% 100%;
+    animation: shimmer 1.4s linear infinite;
+  }
+
+  &__main {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+
+    h2 {
+      font-size: 17px;
+      overflow-wrap: anywhere;
+    }
+  }
+
+  &__meta {
+    margin: 0;
+    color: var(--tf-muted);
+    font-size: 14px;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+
+    &:hover {
+      color: var(--tf-accent-strong);
+      text-decoration: underline;
+    }
+  }
+}
+
+/* The status text is always shown, so color is never the only cue. */
+.status {
+  --c: var(--tf-accent-strong);
+  --c-soft: var(--tf-accent-soft);
+
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: var(--c-soft);
+  color: var(--c);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+
+  &::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  &--submitted {
+    --c: var(--tf-ink-soft);
+    --c-soft: var(--tf-bg);
+  }
+
+  &--in-progress {
+    --c: var(--tf-amber);
+    --c-soft: var(--tf-amber-soft);
+  }
+
+  &--offer {
+    --c: var(--tf-success);
+    --c-soft: var(--tf-success-soft);
+  }
+
+  &--closed {
+    --c: var(--tf-muted);
+    --c-soft: var(--tf-bg);
+  }
+}
+
+.empty {
+  padding: 48px 24px;
+  border: 1px dashed var(--tf-line);
+  border-radius: var(--tf-radius);
+  background: var(--tf-surface);
+  text-align: center;
+
+  h2 {
+    font-size: 20px;
+  }
+
+  p {
+    margin: 8px 0 20px;
+    color: var(--tf-muted);
+  }
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

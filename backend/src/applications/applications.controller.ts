@@ -26,7 +26,7 @@ const applicationId = () =>
 /**
  * Applications (API spec IV).
  * Candidates apply from the public careers page, so submitting is public;
- * only staff can see the list.
+ * only staff can see the list, and applicants see only their own.
  */
 @ApiTags('Applications')
 @Controller('applications')
@@ -42,6 +42,18 @@ export class ApplicationsController {
   @Get()
   list(@CurrentUser() user: AuthUser) {
     return this.applications.list(user.id);
+  }
+
+  /**
+   * GET /api/applications/mine — the signed-in applicant's own
+   * applications with a friendly status. Declared before ':id' so "mine"
+   * is not read as an id.
+   */
+  @ApiBearerAuth()
+  @Roles('applicant')
+  @Get('mine')
+  listMine(@CurrentUser() user: AuthUser) {
+    return this.applications.listMine(user.email);
   }
 
   /** GET /api/applications/:id — one application, for the profile page. */

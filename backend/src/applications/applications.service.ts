@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, sql } from 'drizzle-orm';
 import { DB, type Database } from '../database/database.module.js';
 import {
   type AiScreening,
@@ -17,6 +17,7 @@ import {
 } from '../database/schema.js';
 import type { CreateApplicationDto } from './dto/create-application.dto.js';
 import { signUploadToken } from '../common/upload-token/upload-token.js';
+import { APPLICANT_STATUS_LABELS } from '../notifications/applicant-status.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import {
   NO_RATINGS,
@@ -62,6 +63,19 @@ type ReviewMaps = {
   averages: Map<number, RatingAverage>;
   mine: Map<number, number>;
   notes: Map<number, number>;
+};
+
+/**
+ * One application in GET /api/applications/mine. Only what the applicant
+ * may see: no AI screening, ratings, notes, or the internal stage name.
+ */
+export type MyApplicationItem = {
+  id: number;
+  job_posting_id: number;
+  posting_title: string;
+  submitted_at: Date;
+  /** The stage as worded for the applicant, e.g. "Under review". */
+  status: string;
 };
 
 /** What to read for each application, shared by the list and one-item views. */
@@ -146,6 +160,34 @@ export class ApplicationsService {
       noteCounts(this.db, ids),
     ]);
     return { averages, mine, notes };
+  }
+
+  /**
+   * The applications sent with this email, newest first, for the
+   * applicant's My Applications page. Applications have no user id, so they
+   * are matched on the profile email, ignoring letter case.
+   */
+  async listMine(email: string): Promise<MyApplicationItem[]> {
+    const rows = await this.db
+      .select({
+        id: applications.id,
+        job_posting_id: applications.job_posting_id,
+        posting_title: jobPostings.title,
+        submitted_at: applications.submitted_at,
+        kanban_stage: applications.kanban_stage,
+      })
+      .from(applications)
+      .innerJoin(
+        applicantProfiles,
+        eq(applicantProfiles.application_id, applications.id),
+      )
+      .innerJoin(jobPostings, eq(jobPostings.id, applications.job_posting_id))
+      .where(eq(sql`lower(${applicantProfiles.email})`, email.toLowerCase()))
+      .orderBy(desc(applications.submitted_at), desc(applications.id));
+    return rows.map(({ kanban_stage, ...row }) => ({
+      ...row,
+      status: APPLICANT_STATUS_LABELS[kanban_stage],
+    }));
   }
 
   /**
