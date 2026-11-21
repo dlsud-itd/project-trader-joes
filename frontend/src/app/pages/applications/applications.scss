@@ -144,6 +144,16 @@
   span {
     flex: 1;
   }
+
+  /* The light ghost button would be dark text on the dark bar */
+  .tf-btn--ghost {
+    border-color: rgb(255 255 255 / 35%);
+    color: #fff;
+
+    &:hover:not(:disabled) {
+      border-color: #fff;
+    }
+  }
 }
 
 .row {
