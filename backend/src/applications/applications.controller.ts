@@ -9,8 +9,10 @@ import {
   Post,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { CurrentUser } from '../common/decorators/current-user.decorator.js';
 import { Public } from '../common/decorators/public.decorator.js';
 import { Roles } from '../common/decorators/roles.decorator.js';
+import type { AuthUser } from '../common/types/auth-user.js';
 import { ApplicationsService } from './applications.service.js';
 import { CreateApplicationDto } from './dto/create-application.dto.js';
 import { UpdateStageDto } from './dto/update-stage.dto.js';
@@ -24,7 +26,7 @@ const applicationId = () =>
 /**
  * Applications (API spec IV).
  * Candidates apply from the public careers page, so submitting is public;
- * only staff can see the list.
+ * only staff can see the list, and applicants see only their own.
  */
 @ApiTags('Applications')
 @Controller('applications')
@@ -40,6 +42,18 @@ export class ApplicationsController {
   @Get()
   list() {
     return this.applications.list();
+  }
+
+  /**
+   * GET /api/applications/mine — the signed-in applicant's own
+   * applications with a friendly status. Declared before ':id' so "mine"
+   * is not read as an id.
+   */
+  @ApiBearerAuth()
+  @Roles('applicant')
+  @Get('mine')
+  listMine(@CurrentUser() user: AuthUser) {
+    return this.applications.listMine(user.email);
   }
 
   /** GET /api/applications/:id — one application, for the profile page. */
