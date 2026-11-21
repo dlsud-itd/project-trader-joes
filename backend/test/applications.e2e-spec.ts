@@ -28,6 +28,8 @@ describe('Applications (e2e)', () => {
   let closedPostingId: number;
   /** Applicant account made for the list tests; deleted afterwards. */
   const applicantEmail = `e2e.list.${Date.now()}@example.com`;
+  /** Applicant account made for the My Applications tests. */
+  const mineEmail = `e2e.mine.${Date.now()}@example.com`;
 
   const api = () => request(app.getHttpServer());
 
@@ -90,7 +92,9 @@ describe('Applications (e2e)', () => {
         .where(inArray(applications.job_posting_id, postingIds));
       await db.delete(jobPostings).where(inArray(jobPostings.id, postingIds));
     }
-    await db.delete(users).where(eq(users.email, applicantEmail));
+    await db
+      .delete(users)
+      .where(inArray(users.email, [applicantEmail, mineEmail]));
     await app.close();
   });
 
@@ -367,6 +371,83 @@ describe('Applications (e2e)', () => {
         .set(manager)
         .expect(200);
       expect(body.kanban_stage).toBe('Applied');
+    });
+  });
+
+  describe('GET /api/applications/mine', () => {
+    let asApplicant: { Authorization: string };
+
+    beforeAll(async () => {
+      await api()
+        .post('/api/auth/register-applicant')
+        .send({
+          email: mineEmail,
+          password: 'Password123',
+          first_name: 'E2E',
+          last_name: 'Mine',
+        })
+        .expect(201);
+      asApplicant = await signIn(mineEmail, 'Password123');
+    });
+
+    const mine = async () => {
+      const { body } = await api()
+        .get('/api/applications/mine')
+        .set(asApplicant)
+        .expect(200);
+      return body as { id: number }[];
+    };
+
+    it('returns only the applicant-safe fields', async () => {
+      const id = await addApplication(mineEmail);
+      await db.insert(aiScreenings).values({
+        application_id: id,
+        fit_score: 90,
+        explanation: 'Internal only.',
+        requirement_matches: [],
+        status: 'completed',
+      });
+      await db
+        .update(applications)
+        .set({ kanban_stage: 'Screening' })
+        .where(eq(applications.id, id));
+
+      const item = (await mine()).find((a) => a.id === id);
+      expect(Object.keys(item ?? {}).sort()).toEqual([
+        'id',
+        'job_posting_id',
+        'posting_title',
+        'status',
+        'submitted_at',
+      ]);
+      expect(item).toMatchObject({
+        job_posting_id: openPostingId,
+        posting_title: 'E2E Applications open',
+        // Screening is worded for the applicant, not shown as it is.
+        status: 'Under review',
+      });
+    });
+
+    it('lists only their own applications, in any letter case', async () => {
+      const ownId = await addApplication(mineEmail);
+      const upperId = await addApplication(mineEmail.toUpperCase());
+      const otherId = await addApplication('e2e.mine.other@example.com');
+
+      const ids = (await mine()).map((a) => a.id);
+      expect(ids).toEqual(expect.arrayContaining([ownId, upperId]));
+      expect(ids).not.toContain(otherId);
+      // Newest first.
+      expect(ids.indexOf(upperId)).toBeLessThan(ids.indexOf(ownId));
+    });
+
+    it('keeps staff (403) and signed-out visitors (401) out', async () => {
+      const recruiter = await signIn(
+        'recruiter@talentflow.dev',
+        'Recruiter123!',
+      );
+      await api().get('/api/applications/mine').set(manager).expect(403);
+      await api().get('/api/applications/mine').set(recruiter).expect(403);
+      await api().get('/api/applications/mine').expect(401);
     });
   });
 });
