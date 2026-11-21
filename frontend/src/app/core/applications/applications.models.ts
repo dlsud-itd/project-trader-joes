@@ -46,3 +46,24 @@ export type ApplicationRow = {
   /** The team's average star rating; `average` is null until someone rates. */
   rating: RatingAverage;
 };
+
+/**
+ * How a stage is worded for the applicant (GET /api/applications/mine).
+ * Values match APPLICANT_STATUS_LABELS in the backend.
+ */
+export enum ApplicantStatus {
+  SUBMITTED = 'Submitted',
+  UNDER_REVIEW = 'Under review',
+  INTERVIEW = 'Interview',
+  OFFER = 'Offer',
+  CLOSED = 'Closed',
+}
+
+/** One of the signed-in applicant's own applications. */
+export type MyApplication = {
+  id: number;
+  job_posting_id: number;
+  posting_title: string;
+  submitted_at: string;
+  status: ApplicantStatus;
+};
