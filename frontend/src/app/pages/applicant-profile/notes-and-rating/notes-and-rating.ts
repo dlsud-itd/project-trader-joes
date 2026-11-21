@@ -17,6 +17,7 @@ import {
 } from '@angular/forms';
 import { finalize, forkJoin, Observable } from 'rxjs';
 import { apiErrorMessage } from '../../../core/api/api-error';
+import { UserRole } from '../../../core/auth/auth.models';
 import { AuthService } from '../../../core/auth/auth.service';
 import {
   Note,
@@ -34,6 +35,7 @@ import { notBlank } from '../../../shared/validators';
 const LOAD_FAILED_MESSAGE = 'Could not load notes and ratings.';
 const NOTE_FAILED_MESSAGE = 'Your note wasn’t saved. Try again.';
 const RATING_FAILED_MESSAGE = 'Your rating wasn’t saved. Try again.';
+const DELETE_FAILED_MESSAGE = 'The note wasn’t deleted. Try again.';
 /** How often "5 minutes ago" is brought up to date. */
 const CLOCK_TICK_MS = 60_000;
 
@@ -61,6 +63,8 @@ export class NotesAndRating {
   readonly applicationId = input.required<number>();
   /** The team average changed, so the page can update it elsewhere. */
   readonly ratingChange = output<RatingAverage>();
+  /** How many notes there are now, after posting or deleting one. */
+  readonly noteCountChange = output<number>();
 
   protected readonly maxLength = NOTE_MAX_LENGTH;
   protected readonly notes = signal<Note[]>([]);
@@ -71,6 +75,8 @@ export class NotesAndRating {
   protected readonly ratingError = signal<string | null>(null);
   /** Ids of notes shown before the server confirmed them. */
   protected readonly pendingIds = signal<ReadonlySet<number>>(new Set());
+  /** The note asking "Delete this note?", if any. */
+  protected readonly confirmingId = signal<number | null>(null);
   protected readonly now = signal(new Date());
 
   protected readonly noteForm = new FormGroup({
@@ -132,6 +138,36 @@ export class NotesAndRating {
     return note.author.id === this.auth.user()?.id;
   }
 
+  /** Authors can delete their own notes; managers can delete any. */
+  protected canDelete(note: Note): boolean {
+    if (this.isPending(note)) return false;
+    return this.isMine(note) || this.auth.user()?.role === UserRole.MANAGER;
+  }
+
+  /** Takes the note out at once; puts it back where it was if that fails. */
+  protected deleteNote(note: Note): void {
+    this.confirmingId.set(null);
+    this.noteError.set(null);
+    const before = this.notes();
+    this.setNotes(before.filter((n: Note) => n.id !== note.id));
+
+    this.reviewsApi
+      .deleteNote(this.applicationId(), note.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        error: (err: unknown) => {
+          // Put it back in its old place, keeping notes added meanwhile.
+          this.setNotes(restoreNote(this.notes(), note, before));
+          this.noteError.set(apiErrorMessage(err, DELETE_FAILED_MESSAGE));
+        },
+      });
+  }
+
+  private setNotes(notes: Note[]): void {
+    this.notes.set(notes);
+    this.noteCountChange.emit(notes.filter((n: Note) => n.id > 0).length);
+  }
+
   /** Ctrl+Enter (Cmd+Enter on a Mac) posts the note. */
   protected onKeydown(event: KeyboardEvent): void {
     if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
@@ -172,8 +208,8 @@ export class NotesAndRating {
       )
       .subscribe({
         next: (saved: Note) =>
-          this.notes.update((notes: Note[]) =>
-            notes.map((n: Note) => (n.id === pending.id ? saved : n)),
+          this.setNotes(
+            this.notes().map((n: Note) => (n.id === pending.id ? saved : n)),
           ),
         error: (err: unknown) => {
           this.notes.update((notes: Note[]) =>
@@ -228,4 +264,21 @@ export class NotesAndRating {
       return next;
     });
   }
+}
+
+/**
+ * `notes` with `note` back in the spot it had in `before`: right after the
+ * note that came before it, or first if none of those are left.
+ */
+export function restoreNote(
+  notes: readonly Note[],
+  note: Note,
+  before: readonly Note[],
+): Note[] {
+  if (notes.some((n: Note) => n.id === note.id)) return [...notes];
+  const index = before.findIndex((n: Note) => n.id === note.id);
+  const earlier = before.slice(0, index).reverse();
+  const anchor = earlier.find((e: Note) => notes.some((n) => n.id === e.id));
+  const at = anchor ? notes.findIndex((n: Note) => n.id === anchor.id) + 1 : 0;
+  return [...notes.slice(0, at), note, ...notes.slice(at)];
 }

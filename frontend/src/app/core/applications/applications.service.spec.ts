@@ -30,6 +30,8 @@ const row: ApplicationRow = {
   resume: null,
   screening: null,
   rating: { average: null, count: 0 },
+  my_rating: null,
+  note_count: 0,
 };
 
 describe('ApplicationsService', () => {

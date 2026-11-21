@@ -7,6 +7,7 @@ export enum AppPath {
   APPLICANT_REGISTER = '/careers/register',
   MY_APPLICATIONS = '/careers/applications',
   APPLICATIONS = '/applications',
+  POSTINGS = '/postings',
 }
 
 /** Query value roleGuard adds when it sends someone to the dashboard. */

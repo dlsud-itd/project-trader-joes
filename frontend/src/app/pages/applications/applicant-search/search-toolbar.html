@@ -35,6 +35,13 @@
       </select>
     </label>
 
+    @if (canFilterMine()) {
+      <label class="toggle">
+        <input type="checkbox" formControlName="assignedOnly" />
+        <span>My postings</span>
+      </label>
+    }
+
     <ng-content />
   </div>
 
@@ -63,6 +70,15 @@
       <select formControlName="resume">
         @for (option of resumeOptions; track option) {
           <option [ngValue]="option">{{ resumeLabel[option] }}</option>
+        }
+      </select>
+    </label>
+
+    <label class="select">
+      <span>My rating</span>
+      <select formControlName="review">
+        @for (option of reviewOptions; track option) {
+          <option [ngValue]="option">{{ reviewLabel[option] }}</option>
         }
       </select>
     </label>

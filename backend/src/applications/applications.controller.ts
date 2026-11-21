@@ -35,13 +35,13 @@ export class ApplicationsController {
 
   /**
    * GET /api/applications — every application, newest first, with the
-   * candidate, posting, and AI screening. Staff only.
+   * candidate, posting, AI screening, ratings, and note count. Staff only.
    */
   @ApiBearerAuth()
   @Roles('manager', 'recruiter')
   @Get()
-  list() {
-    return this.applications.list();
+  list(@CurrentUser() user: AuthUser) {
+    return this.applications.list(user.id);
   }
 
   /**
@@ -60,8 +60,11 @@ export class ApplicationsController {
   @ApiBearerAuth()
   @Roles('manager', 'recruiter')
   @Get(':id')
-  findOne(@Param('id', applicationId()) id: number) {
-    return this.applications.findOne(id);
+  findOne(
+    @CurrentUser() user: AuthUser,
+    @Param('id', applicationId()) id: number,
+  ) {
+    return this.applications.findOne(id, user.id);
   }
 
   /**

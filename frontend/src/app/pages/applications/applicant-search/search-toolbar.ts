@@ -20,6 +20,8 @@ import {
   PostingOption,
   RESUME_LABEL,
   ResumeFilter,
+  REVIEW_LABEL,
+  ReviewFilter,
   SORT_LABEL,
   SORT_OPTIONS,
   SortOption,
@@ -38,6 +40,8 @@ import {
 export class SearchToolbar {
   readonly query = input<ApplicantQuery>(DEFAULT_QUERY);
   readonly postings = input<PostingOption[]>([]);
+  /** Recruiters can narrow the list to the postings they are assigned to. */
+  readonly canFilterMine = input(false);
   readonly queryChange = output<ApplicantQuery>();
 
   private readonly fb = inject(FormBuilder);
@@ -47,6 +51,8 @@ export class SearchToolbar {
     stage: this.fb.control<KanbanStage | null>(null),
     applied: AppliedWithin.ANY,
     resume: ResumeFilter.ANY,
+    review: ReviewFilter.ANY,
+    assignedOnly: false,
     sort: SortOption.FIT_HIGH,
     thenBy: this.fb.control<SortOption | null>(SortOption.NEWEST),
   });
@@ -54,9 +60,11 @@ export class SearchToolbar {
   protected readonly stages = KANBAN_STAGES;
   protected readonly appliedOptions = Object.values(AppliedWithin);
   protected readonly resumeOptions = Object.values(ResumeFilter);
+  protected readonly reviewOptions = Object.values(ReviewFilter);
   protected readonly sortOptions = SORT_OPTIONS;
   protected readonly appliedLabel = APPLIED_LABEL;
   protected readonly resumeLabel = RESUME_LABEL;
+  protected readonly reviewLabel = REVIEW_LABEL;
   protected readonly sortLabel = SORT_LABEL;
 
   protected readonly activeCount = computed(() =>

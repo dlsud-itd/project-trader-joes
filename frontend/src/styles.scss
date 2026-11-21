@@ -170,6 +170,15 @@ textarea {
     }
   }
 
+  &--danger {
+    background: var(--tf-danger);
+    color: #fff;
+
+    &:hover:not(:disabled) {
+      background: color-mix(in srgb, var(--tf-danger) 85%, #000);
+    }
+  }
+
   &--sm {
     height: 34px;
     padding: 0 12px;

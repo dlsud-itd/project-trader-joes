@@ -9,7 +9,7 @@ import { environment } from '../../../../environments/environment';
 import { User, UserRole } from '../../../core/auth/auth.models';
 import { AuthService } from '../../../core/auth/auth.service';
 import { Note, RatingAverage, RatingSummary } from '../../../core/reviews';
-import { NotesAndRating } from './notes-and-rating';
+import { NotesAndRating, restoreNote } from './notes-and-rating';
 
 const API = `${environment.apiUrl}/applications/101`;
 
@@ -41,6 +41,7 @@ describe('NotesAndRating', () => {
   let fixture: ComponentFixture<NotesAndRating>;
   let http: HttpTestingController;
   let averages: RatingAverage[];
+  let noteCounts: number[];
 
   const el = () => fixture.nativeElement as HTMLElement;
   /** The card's text with line breaks and indents collapsed. */
@@ -69,19 +70,23 @@ describe('NotesAndRating', () => {
     el().querySelectorAll<HTMLInputElement>('input[type=radio]')[n - 1];
 
   /** Opens the card and answers its two requests. */
-  function render(notes: Note[] = [OLD_NOTE], summary = SUMMARY) {
+  function render(notes: Note[] = [OLD_NOTE], summary = SUMMARY, me = ME) {
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
-        { provide: AuthService, useValue: { user: signal(ME) } },
+        { provide: AuthService, useValue: { user: signal(me) } },
       ],
     });
     http = TestBed.inject(HttpTestingController);
     fixture = TestBed.createComponent(NotesAndRating);
     averages = [];
+    noteCounts = [];
     fixture.componentInstance.ratingChange.subscribe((r: RatingAverage) =>
       averages.push(r),
+    );
+    fixture.componentInstance.noteCountChange.subscribe((n: number) =>
+      noteCounts.push(n),
     );
     fixture.componentRef.setInput('applicationId', 101);
     fixture.detectChanges();
@@ -277,5 +282,117 @@ describe('NotesAndRating', () => {
       fixture.detectChanges();
       expect(button('Remove')).toBeUndefined();
     });
+  });
+
+  describe('deleting a note', () => {
+    const MY_NOTE: Note = {
+      id: 2,
+      application_id: 101,
+      body: 'Booked an interview.',
+      created_at: '2026-10-22T02:10:00Z',
+      author: { id: ME.id, first_name: 'Juan', last_name: 'Reyes' },
+    };
+    const MANAGER: User = {
+      ...ME,
+      id: 1,
+      first_name: 'Maria',
+      last_name: 'Santos',
+      role: UserRole.MANAGER,
+    };
+    const deleteLinks = () =>
+      Array.from(el().querySelectorAll<HTMLButtonElement>('.note .link'));
+    const confirmDelete = () =>
+      el().querySelector<HTMLButtonElement>(
+        '.note__confirm .tf-btn--danger',
+      ) as HTMLButtonElement;
+
+    it('only offers Delete on your own notes', () => {
+      render([MY_NOTE, OLD_NOTE]);
+      expect(deleteLinks()).toHaveLength(1);
+      expect(deleteLinks()[0].getAttribute('aria-label')).toContain('Juan');
+    });
+
+    it('lets managers delete anyone’s note', () => {
+      render([MY_NOTE, OLD_NOTE], SUMMARY, MANAGER);
+      expect(deleteLinks()).toHaveLength(2);
+    });
+
+    it('asks first, and Cancel keeps the note', () => {
+      render([MY_NOTE, OLD_NOTE]);
+      deleteLinks()[0].click();
+      fixture.detectChanges();
+      expect(text()).toContain('Delete this note for everyone?');
+
+      button('Cancel').click();
+      fixture.detectChanges();
+      expect(el().querySelector('.note__confirm')).toBeNull();
+      expect(noteBodies()).toHaveLength(2);
+      http.expectNone(`${API}/notes/2`);
+    });
+
+    it('takes the note out at once, then deletes it', () => {
+      render([MY_NOTE, OLD_NOTE]);
+      deleteLinks()[0].click();
+      fixture.detectChanges();
+      confirmDelete().click();
+      fixture.detectChanges();
+
+      expect(noteBodies()).toEqual(['Strong portfolio.']);
+      expect(noteCounts.at(-1)).toBe(1);
+      const req = http.expectOne(`${API}/notes/2`);
+      expect(req.request.method).toBe('DELETE');
+      req.flush({ message: 'Note deleted.' });
+    });
+
+    it('puts the note back in its place if deleting fails', () => {
+      render([OLD_NOTE, MY_NOTE]);
+      deleteLinks()[0].click();
+      fixture.detectChanges();
+      confirmDelete().click();
+      http
+        .expectOne(`${API}/notes/2`)
+        .flush(
+          { error: 'Only the note’s author or a manager can delete it.' },
+          { status: 403, statusText: 'Forbidden' },
+        );
+      fixture.detectChanges();
+
+      expect(noteBodies()).toEqual([
+        'Strong portfolio.',
+        'Booked an interview.',
+      ]);
+      expect(noteCounts.at(-1)).toBe(2);
+      expect(el().querySelector('[role=alert]')?.textContent).toContain(
+        'author or a manager',
+      );
+    });
+  });
+});
+
+describe('restoreNote', () => {
+  const note = (id: number): Note => ({
+    id,
+    application_id: 101,
+    body: `Note ${id}`,
+    created_at: '2026-10-21T02:10:00Z',
+    author: { id: 1, first_name: 'Maria', last_name: 'Santos' },
+  });
+  const ids = (notes: Note[]) => notes.map((n: Note) => n.id);
+
+  it('puts the note back after the one that was before it', () => {
+    const before = [note(3), note(2), note(1)];
+    expect(ids(restoreNote([note(3), note(1)], note(2), before))).toEqual([
+      3, 2, 1,
+    ]);
+  });
+
+  it('goes first when the notes before it are gone, keeping new ones', () => {
+    const before = [note(3), note(2), note(1)];
+    const now = [note(9), note(1)];
+    expect(ids(restoreNote(now, note(3), before))).toEqual([3, 9, 1]);
+  });
+
+  it('does not add the note twice', () => {
+    expect(ids(restoreNote([note(1)], note(1), [note(1)]))).toEqual([1]);
   });
 });
