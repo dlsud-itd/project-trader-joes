@@ -6,8 +6,21 @@
   >
     ← Back to list
   </button>
-  <h2>Comparing {{ rows().length }} applicants</h2>
+  <h2>
+    Comparing {{ rows().length }} applicants
+    @if (posting(); as job) {
+      for <span class="job">{{ job.title }}</span>
+    }
+  </h2>
 </div>
+
+@if (!posting()) {
+  <p class="tf-alert tf-alert--info mixed" role="note">
+    These applicants applied to different jobs ({{ titles().join(', ') }}). Each
+    fit score is measured against the applicant's own job, so the scores can't
+    be compared. Go back and pick applicants from one posting.
+  </p>
+}
 
 <div class="scroll">
   <table class="compare" [class]="'cols-' + rows().length">
@@ -124,7 +137,11 @@
       @if (requirements().length) {
         <tr class="group">
           <th scope="rowgroup" [attr.colspan]="rows().length + 1">
-            Requirements
+            @if (posting(); as job) {
+              Requirements for {{ job.title }}
+            } @else {
+              Requirements
+            }
           </th>
         </tr>
         @for (line of requirements(); track line.requirement) {

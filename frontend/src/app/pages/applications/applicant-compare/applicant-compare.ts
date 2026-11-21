@@ -11,13 +11,15 @@ import {
   bestFitIds,
   isScreened,
   MIN_COMPARE,
+  postingTitles,
   requirementRows,
+  sharedPosting,
 } from './compare';
 
 /**
- * Two to four applicants side by side on the Applications page
- * (WBS 4.5.3.1): fit score, rating, stage, resume, and how each one meets
- * the posting's requirements.
+ * Two to four applicants for the same job side by side on the
+ * Applications page (WBS 4.5.3.1): fit score, rating, stage, resume, and how
+ * each one meets that posting's requirements.
  */
 @Component({
   selector: 'app-applicant-compare',
@@ -34,6 +36,9 @@ export class ApplicantCompare {
   /** Drops one applicant from the comparison. */
   readonly remove = output<number>();
 
+  /** The job compared for; null when the applicants applied to different jobs. */
+  protected readonly posting = computed(() => sharedPosting(this.rows()));
+  protected readonly titles = computed(() => postingTitles(this.rows()));
   protected readonly best = computed(() => bestFitIds(this.rows()));
   protected readonly requirements = computed(() =>
     requirementRows(this.rows()),

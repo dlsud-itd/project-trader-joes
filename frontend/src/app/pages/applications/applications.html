@@ -81,6 +81,9 @@
     <div class="picks" role="region" aria-label="Applicants to compare">
       <span>
         <b>{{ picked().length }}</b> selected
+        @if (pickedPosting(); as job) {
+          for <b>{{ job.title }}</b>
+        }
         @if (isPickFull()) {
           · the most you can compare
         } @else if (picked().length < minCompare) {
@@ -135,7 +138,14 @@
               class="pick"
               type="checkbox"
               [checked]="isPicked(row.id)"
-              [disabled]="isPickFull() && !isPicked(row.id)"
+              [disabled]="!canPick(row)"
+              [title]="
+                canPick(row)
+                  ? ''
+                  : isPickFull()
+                    ? 'You can compare up to 4 applicants'
+                    : 'Compare applicants who applied to the same job'
+              "
               [attr.aria-label]="'Compare ' + row.full_name"
               (change)="togglePick(row)"
             />
