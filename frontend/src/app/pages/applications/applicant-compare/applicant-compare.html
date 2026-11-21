@@ -48,15 +48,18 @@
       <tr>
         <th scope="row">AI fit</th>
         @for (row of rows(); track row.id) {
-          <td class="fit">
-            <app-fit-score-badge
-              variant="hero"
-              [score]="row.screening?.fit_score"
-              [status]="row.screening?.status"
-            />
-            @if (best().has(row.id)) {
-              <span class="best">Highest fit</span>
-            }
+          <td>
+            <!-- Layout goes on an inner box: a grid <td> leaves the table -->
+            <div class="fit">
+              <app-fit-score-badge
+                variant="hero"
+                [score]="row.screening?.fit_score"
+                [status]="row.screening?.status"
+              />
+              @if (best().has(row.id)) {
+                <span class="best">Highest fit</span>
+              }
+            </div>
           </td>
         }
       </tr>
@@ -148,11 +151,13 @@
       <tr>
         <th scope="row">Contact</th>
         @for (row of rows(); track row.id) {
-          <td class="contact">
-            <a [href]="'mailto:' + row.email">{{ row.email }}</a>
-            @if (row.phone) {
-              <span>{{ row.phone }}</span>
-            }
+          <td>
+            <div class="contact">
+              <a [href]="'mailto:' + row.email">{{ row.email }}</a>
+              @if (row.phone) {
+                <span>{{ row.phone }}</span>
+              }
+            </div>
           </td>
         }
       </tr>
