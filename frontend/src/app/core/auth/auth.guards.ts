@@ -46,11 +46,12 @@ export const applicantGuard: CanActivateFn = (
           queryParams: { returnUrl: state.url },
         });
       }
+      // Staff have no applications of their own; their home is the
+      // dashboard. Its "denied" notice is about manager-only pages, so it
+      // is not shown here.
       return (
         auth.hasRole(UserRole.APPLICANT) ||
-        router.createUrlTree([AppPath.DASHBOARD], {
-          queryParams: { denied: ACCESS_DENIED_FLAG },
-        })
+        router.createUrlTree([AppPath.DASHBOARD])
       );
     }),
   );

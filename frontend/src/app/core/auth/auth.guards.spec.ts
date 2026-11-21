@@ -176,11 +176,11 @@ describe('applicantGuard', () => {
     expect(urlOf(result)).toBe(APPLICANT_LOGIN_URL);
   });
 
-  it('sends staff to /dashboard?denied=1', async () => {
+  it('sends staff to their dashboard', async () => {
     signedInAs(UserRole.MANAGER);
 
     const result = await runGuard(applicantGuard, MY_APPLICATIONS_URL);
 
-    expect(urlOf(result)).toBe(DENIED_URL);
+    expect(urlOf(result)).toBe('/dashboard');
   });
 });
