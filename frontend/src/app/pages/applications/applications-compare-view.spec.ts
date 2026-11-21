@@ -24,7 +24,8 @@ describe('Applications compare view', () => {
   let router: Router;
 
   const el = () => harness.routeNativeElement as HTMLElement;
-  const text = () => el().textContent ?? '';
+  // Spaces collapsed, since headings wrap across lines in the template.
+  const text = () => (el().textContent ?? '').replace(/\s+/g, ' ');
   const tick = (name: string): HTMLInputElement =>
     el().querySelector<HTMLInputElement>(
       `input.pick[aria-label="Compare ${name}"]`,
@@ -84,29 +85,47 @@ describe('Applications compare view', () => {
 
     pick('Mei-Lin Chen');
     expect(text()).toContain('1 selected');
+    expect(text()).toContain('for Frontend Developer Intern');
     expect(button('Compare 1').disabled).toBe(true);
 
-    pick('Kenji Watanabe');
+    pick('Jonah Reyes');
     expect(button('Compare 2').disabled).toBe(false);
   });
 
-  it('opens the ticked applicants side by side and keeps them in the URL', async () => {
+  it('only lets you tick applicants for the same job', async () => {
+    await open('/applications');
+    pick('Mei-Lin Chen');
+
+    // Kenji applied to QA Analyst, not Frontend Developer Intern.
+    expect(tick('Kenji Watanabe').disabled).toBe(true);
+    expect(tick('Kenji Watanabe').title).toBe(
+      'Compare applicants who applied to the same job',
+    );
+    expect(tick('Jonah Reyes').disabled).toBe(false);
+
+    // Unticking the first applicant frees up every job again.
+    pick('Mei-Lin Chen');
+    expect(tick('Kenji Watanabe').disabled).toBe(false);
+  });
+
+  it('opens the ticked applicants side by side for their job', async () => {
     await open('/applications');
     pick('Kenji Watanabe');
-    pick('Mei-Lin Chen');
+    pick('Sofia Alvarez');
     button('Compare 2').click();
     await settle();
 
-    expect(router.url).toBe('/applications?compare=106,101');
-    expect(columns()).toEqual(['Kenji Watanabe', 'Mei-Lin Chen']);
+    expect(router.url).toBe('/applications?compare=106,107');
+    expect(columns()).toEqual(['Kenji Watanabe', 'Sofia Alvarez']);
     expect(el().querySelector('app-search-toolbar')).toBeNull();
-    expect(text()).toContain('Requirements');
+    expect(text()).toContain('Comparing 2 applicants for QA Analyst');
+    expect(text()).toContain('Requirements for QA Analyst');
     expect(text()).toContain('CI pipelines');
   });
 
   it('goes back to the list with the same applicants still ticked', async () => {
-    await open('/applications?compare=101,102');
-    expect(columns()).toEqual(['Mei-Lin Chen', 'Jonah Reyes']);
+    await open('/applications?compare=101,103');
+    expect(columns()).toEqual(['Mei-Lin Chen', 'Aisha Rahman']);
     expect(text()).toContain('Highest fit');
 
     button('← Back to list').click();
@@ -114,7 +133,7 @@ describe('Applications compare view', () => {
     expect(router.url).toBe('/applications');
     expect(el().querySelector('.list__head')).not.toBeNull();
     expect(tick('Mei-Lin Chen').checked).toBe(true);
-    expect(tick('Jonah Reyes').checked).toBe(true);
+    expect(tick('Aisha Rahman').checked).toBe(true);
   });
 
   it('allows at most four applicants', async () => {
@@ -123,17 +142,18 @@ describe('Applications compare view', () => {
       'Mei-Lin Chen',
       'Jonah Reyes',
       'Aisha Rahman',
-      'Kenji Watanabe',
+      'Lucas Martin',
     ]) {
       pick(name);
     }
     expect(text()).toContain('the most you can compare');
-    expect(tick('Sofia Alvarez').disabled).toBe(true);
+    expect(tick('Hana Kim').disabled).toBe(true);
+    expect(tick('Hana Kim').title).toBe('You can compare up to 4 applicants');
     expect(tick('Mei-Lin Chen').disabled).toBe(false);
   });
 
   it('removes an applicant while more than two are compared', async () => {
-    await open('/applications?compare=101,102,106');
+    await open('/applications?compare=101,102,103');
     el()
       .querySelector<HTMLButtonElement>(
         'button[aria-label="Remove Jonah Reyes from compare"]',
@@ -141,9 +161,18 @@ describe('Applications compare view', () => {
       ?.click();
     await settle();
 
-    expect(router.url).toBe('/applications?compare=101,106');
-    expect(columns()).toEqual(['Mei-Lin Chen', 'Kenji Watanabe']);
+    expect(router.url).toBe('/applications?compare=101,103');
+    expect(columns()).toEqual(['Mei-Lin Chen', 'Aisha Rahman']);
     expect(el().querySelector('.remove')).toBeNull();
+  });
+
+  it('warns when a link mixes jobs and names no best fit', async () => {
+    await open('/applications?compare=101,106');
+    expect(columns()).toEqual(['Mei-Lin Chen', 'Kenji Watanabe']);
+    expect(text()).toContain('applied to different jobs');
+    expect(text()).toContain('Frontend Developer Intern, QA Analyst');
+    expect(text()).not.toContain('Highest fit');
+    expect(text()).not.toContain('Comparing 2 applicants for');
   });
 
   it('asks for two applicants when the link has fewer', async () => {

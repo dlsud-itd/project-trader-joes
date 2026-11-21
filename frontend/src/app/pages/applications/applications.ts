@@ -45,6 +45,7 @@ import {
   MIN_COMPARE,
   parseCompareIds,
   pickRows,
+  sharedPosting,
 } from './applicant-compare';
 import { ApplicantDetail } from './applicant-detail';
 import {
@@ -171,6 +172,13 @@ export class Applications implements OnInit {
   protected readonly maxCompare = MAX_COMPARE;
   protected readonly isPickFull = computed(
     () => this.picked().length >= MAX_COMPARE,
+  );
+  /**
+   * The job of the first ticked applicant. Scores are measured per job, so
+   * only applicants of this posting can be ticked with them.
+   */
+  protected readonly pickedPosting = computed(() =>
+    sharedPosting(pickRows(this.rows(), this.picked().slice(0, 1))),
   );
 
   protected readonly rows = signal<ApplicationRow[]>([]);
@@ -366,8 +374,17 @@ export class Applications implements OnInit {
     return this.picked().includes(id);
   }
 
-  /** Ticks or unticks an applicant for Compare; up to four at a time. */
+  /** Can this applicant be ticked alongside the ones already ticked? */
+  protected canPick(row: ApplicationRow): boolean {
+    if (this.isPicked(row.id)) return true;
+    const posting = this.pickedPosting();
+    const isSameJob = !posting || posting.id === row.job_posting_id;
+    return isSameJob && !this.isPickFull();
+  }
+
+  /** Ticks or unticks an applicant for Compare; up to four, one job. */
   protected togglePick(row: ApplicationRow): void {
+    if (!this.canPick(row)) return;
     this.picked.update((ids: readonly number[]) => {
       if (ids.includes(row.id)) {
         return ids.filter((id: number) => id !== row.id);

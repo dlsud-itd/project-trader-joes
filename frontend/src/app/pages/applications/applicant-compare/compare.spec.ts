@@ -9,8 +9,10 @@ import {
   compareParam,
   parseCompareIds,
   pickRows,
+  postingTitles,
   RequirementRow,
   requirementRows,
+  sharedPosting,
 } from './compare';
 
 const byName = (name: string): ApplicationRow =>
@@ -57,9 +59,40 @@ describe('bestFitIds', () => {
     expect([...bestFitIds(rows)]).toEqual([101, 102]);
   });
 
+  it('marks no one when everyone ties', () => {
+    // Mei-Lin and Jonah both score 90.
+    const rows = [byName('Mei-Lin Chen'), byName('Jonah Reyes')];
+    expect(bestFitIds(rows).size).toBe(0);
+  });
+
+  it('marks no one when the applicants applied to different jobs', () => {
+    const rows = [byName('Mei-Lin Chen'), byName('Kenji Watanabe')];
+    expect(bestFitIds(rows).size).toBe(0);
+  });
+
   it('marks no one when fewer than two are scored', () => {
     const rows = [byName('Mei-Lin Chen'), byName('Hana Kim')];
     expect(bestFitIds(rows).size).toBe(0);
+  });
+});
+
+describe('sharedPosting', () => {
+  it('names the job when every applicant applied to it', () => {
+    const rows = [byName('Mei-Lin Chen'), byName('Jonah Reyes')];
+    expect(sharedPosting(rows)).toEqual({
+      id: 1,
+      title: 'Frontend Developer Intern',
+    });
+  });
+
+  it('is null for mixed jobs or nobody', () => {
+    const rows = [byName('Mei-Lin Chen'), byName('Kenji Watanabe')];
+    expect(sharedPosting(rows)).toBeNull();
+    expect(sharedPosting([])).toBeNull();
+    expect(postingTitles(rows)).toEqual([
+      'Frontend Developer Intern',
+      'QA Analyst',
+    ]);
   });
 });
 

@@ -2,9 +2,11 @@ import { RequirementMatch, ScreeningStatus } from '../../../core/ai-screenings';
 import { ApplicationRow } from '../../../core/applications';
 
 /**
- * Helpers for comparing applicants side by side (WBS 4.5.3.1). The ids
- * live in the URL as `?compare=101,102` so a comparison can be shared and
- * survives a refresh.
+ * Helpers for comparing applicants side by side (WBS 4.5.3.1). Fit scores
+ * are measured against each applicant's own posting, so a comparison is for
+ * one job: only applicants of the same posting can be picked together. The
+ * ids live in the URL as `?compare=101,102` so a comparison can be shared
+ * and survives a refresh.
  */
 
 /** The query parameter that holds the compared application ids. */
@@ -41,6 +43,25 @@ export function pickRows(
     .filter((r: ApplicationRow | undefined): r is ApplicationRow => !!r);
 }
 
+/** The job being compared for, or null when the applicants' jobs differ. */
+export function sharedPosting(
+  rows: readonly ApplicationRow[],
+): { id: number; title: string } | null {
+  const first = rows[0];
+  if (!first) return null;
+  const isSame = rows.every(
+    (r: ApplicationRow) => r.job_posting_id === first.job_posting_id,
+  );
+  return isSame
+    ? { id: first.job_posting_id, title: first.posting_title }
+    : null;
+}
+
+/** Every distinct job title among the applicants, in order. */
+export function postingTitles(rows: readonly ApplicationRow[]): string[] {
+  return [...new Set(rows.map((r: ApplicationRow) => r.posting_title))];
+}
+
 /** Only a finished screening has a score worth comparing. */
 export function isScreened(row: ApplicationRow): boolean {
   return row.screening?.status === ScreeningStatus.COMPLETED;
@@ -48,9 +69,12 @@ export function isScreened(row: ApplicationRow): boolean {
 
 /**
  * The applicants with the highest fit score. Empty unless at least two are
- * scored, since one score alone isn't "the best" of anything.
+ * scored for the same job and someone actually scores higher: one score
+ * alone isn't "the best" of anything, scores for different jobs measure
+ * different things, and a full tie has no winner.
  */
 export function bestFitIds(rows: readonly ApplicationRow[]): Set<number> {
+  if (!sharedPosting(rows)) return new Set();
   const scored = rows.filter(
     (r: ApplicationRow) => isScreened(r) && r.screening?.fit_score != null,
   );
@@ -58,11 +82,12 @@ export function bestFitIds(rows: readonly ApplicationRow[]): Set<number> {
   const top = Math.max(
     ...scored.map((r: ApplicationRow) => r.screening?.fit_score ?? 0),
   );
-  return new Set(
-    scored
-      .filter((r: ApplicationRow) => r.screening?.fit_score === top)
-      .map((r: ApplicationRow) => r.id),
+  const best = scored.filter(
+    (r: ApplicationRow) => r.screening?.fit_score === top,
   );
+  // When every scored applicant ties, nobody stands out.
+  if (best.length === scored.length) return new Set();
+  return new Set(best.map((r: ApplicationRow) => r.id));
 }
 
 /** One requirement and how each compared applicant matches it. */
