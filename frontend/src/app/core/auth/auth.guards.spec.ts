@@ -8,16 +8,24 @@ import {
   UrlTree,
 } from '@angular/router';
 import { firstValueFrom, isObservable, Observable, of, tap } from 'rxjs';
-import { authGuard, guestGuard, roleGuard, staffGuard } from './auth.guards';
+import {
+  applicantGuard,
+  authGuard,
+  guestGuard,
+  roleGuard,
+  staffGuard,
+} from './auth.guards';
 import { UserRole } from './auth.models';
 import { AuthService } from './auth.service';
 
 const TEAM_URL = '/team';
 const DENIED_URL = '/dashboard?denied=1';
 const LOGIN_URL = '/login?returnUrl=%2Fteam';
+const MY_APPLICATIONS_URL = '/careers/applications';
+const APPLICANT_LOGIN_URL =
+  '/careers/login?returnUrl=%2Fcareers%2Fapplications';
 
 const route = {} as ActivatedRouteSnapshot;
-const state = { url: TEAM_URL } as RouterStateSnapshot;
 
 /** Sets up TestBed with a fake AuthService for a role (or nobody). */
 function signedInAs(role: UserRole | null): void {
@@ -37,7 +45,11 @@ function signedInAs(role: UserRole | null): void {
 }
 
 /** Runs a guard and waits for its answer, whatever form it takes. */
-async function runGuard(guard: CanActivateFn): Promise<unknown> {
+async function runGuard(
+  guard: CanActivateFn,
+  url: string = TEAM_URL,
+): Promise<unknown> {
+  const state = { url } as RouterStateSnapshot;
   const result = TestBed.runInInjectionContext(() => guard(route, state));
   return isObservable(result) ? firstValueFrom(result) : result;
 }
@@ -144,5 +156,31 @@ describe('guestGuard', () => {
     const result = await runGuard(guestGuard);
 
     expect(urlOf(result)).toBe('/dashboard');
+  });
+});
+
+describe('applicantGuard', () => {
+  it('lets a signed-in applicant through', async () => {
+    signedInAs(UserRole.APPLICANT);
+
+    const result = await runGuard(applicantGuard, MY_APPLICATIONS_URL);
+
+    expect(result).toBe(true);
+  });
+
+  it('sends a signed-out visitor to the applicant sign-in', async () => {
+    signedInAs(null);
+
+    const result = await runGuard(applicantGuard, MY_APPLICATIONS_URL);
+
+    expect(urlOf(result)).toBe(APPLICANT_LOGIN_URL);
+  });
+
+  it('sends staff to /dashboard?denied=1', async () => {
+    signedInAs(UserRole.MANAGER);
+
+    const result = await runGuard(applicantGuard, MY_APPLICATIONS_URL);
+
+    expect(urlOf(result)).toBe(DENIED_URL);
   });
 });

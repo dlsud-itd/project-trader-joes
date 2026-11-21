@@ -41,6 +41,17 @@
         <strong>{{ sentTo() }}</strong
         >.
       </p>
+      @if (isApplicant()) {
+        <a class="tf-btn tf-btn--primary" [routerLink]="appPath.MY_APPLICATIONS"
+          >Track this application</a
+        >
+      } @else {
+        <a
+          class="tf-btn tf-btn--primary"
+          [routerLink]="appPath.APPLICANT_REGISTER"
+          >Create an account with this email to track it</a
+        >
+      }
       <a class="tf-btn tf-btn--ghost" routerLink="/careers"
         >See other open roles</a
       >

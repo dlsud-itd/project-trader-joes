@@ -30,6 +30,33 @@ export const authGuard: CanActivateFn = (
 };
 
 /**
+ * Lets only signed-in applicants through. Signed-out visitors go to the
+ * applicant sign-in and come back afterwards; staff go to the dashboard.
+ */
+export const applicantGuard: CanActivateFn = (
+  _route: ActivatedRouteSnapshot,
+  state: RouterStateSnapshot,
+): Observable<boolean | UrlTree> => {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+  return auth.restoreSession().pipe(
+    map((isSignedIn: boolean) => {
+      if (!isSignedIn) {
+        return router.createUrlTree([AppPath.APPLICANT_LOGIN], {
+          queryParams: { returnUrl: state.url },
+        });
+      }
+      return (
+        auth.hasRole(UserRole.APPLICANT) ||
+        router.createUrlTree([AppPath.DASHBOARD], {
+          queryParams: { denied: ACCESS_DENIED_FLAG },
+        })
+      );
+    }),
+  );
+};
+
+/**
  * Keeps signed-in users away from the login and sign-up pages: applicants
  * go to the careers site, staff to the dashboard.
  */

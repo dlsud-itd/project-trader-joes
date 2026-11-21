@@ -13,6 +13,12 @@
           }}</span>
           Hi, {{ auth.user()?.first_name }}
         </span>
+        <a
+          class="tf-btn tf-btn--ghost tf-btn--sm"
+          [routerLink]="myApplicationsPath"
+        >
+          My Applications
+        </a>
         <button
           class="tf-btn tf-btn--ghost tf-btn--sm"
           type="button"
